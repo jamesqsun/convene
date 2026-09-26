@@ -12,11 +12,10 @@ This document specifies the revised hackathon MVP target. It replaces the earlie
 - Phone is the sole participant coordination method. Do not require messaging-app identifiers or select a communication platform.
 - Blocking and separate friendship invitation/acceptance workflows are outside this hackathon MVP; mutual per-person feedback is included. Authentication and private-data access controls remain required.
 - Preserve profile interests and preference memories for embedding similarity and LLM activity reasoning.
-- Keep the original memory-generation process, evidence validation, structure, and embedding derivation unchanged. This revision adds presentation and user corrections, not new extraction rules.
-- Display generated memories as the primary profile content, with owner-only Edit and Delete. No Use less, devalue control, or influence attribute. Refresh affected embeddings/derived profiles and invalidate stale representations after changes; deleted memories must stop contributing to planning. Normal profile reads must not regenerate old answers into deleted memories or overwrite edits.
+- Display generated memories as the primary profile content, with the title/topic, summary, and attributes visible, and owner-only Edit and Delete. Edit can change an individual attribute; persist validated changes to the canonical memory used by planning. No Use less, devalue control, or influence attribute. Refresh affected embeddings/derived profiles and invalidate stale representations after changes; deleted memories must stop contributing to planning. Later generation may recreate deleted memories from saved answers for the MVP; no permanent suppression mechanism is required.
 - Ask Would you want to meet this person again? separately for each other participant after a completed non-cancelled group hangout. Store private directional feedback uniquely by event/author/subject and validate participation.
 - Treat missing feedback as no for friendship creation. Only mutual explicit yes answers for the same completed event create a unique unordered friendship and enable reconnection priority; late answers can complete the pair. Creation must be atomic/idempotent under concurrent submissions.
-- Remove manual Add friend controls. Demo friends must have seeded completed-event and mutual-feedback provenance. Missing later feedback does not delete an established friendship; no additional friendship-removal workflow is added here.
+- Remove manual Add friend controls. Demo friends must have seeded completed-event and mutual-feedback provenance. Missing/no feedback does not delete an established friendship, but either response on the latest completed shared event makes the reconnection bonus zero. Explicit no finalizes that event response (no editing in the MVP); missing may be answered later. Older late answers do not override a newer event; a later mutual yes can restore bonus eligibility.
 - Show the owner's previously connected people in a personal graph, distinguish mutual friends, and fade lines with time since the last completed shared Convene hangout. Keep old connections visible; a new completed meeting brightens the line. Visual fading does not remove friendship or disable its reconnection bonus. Do not expose private responses or relationships between third parties.
 
 ## 2. Scheduling contract
@@ -25,10 +24,10 @@ This document specifies the revised hackathon MVP target. It replaces the earlie
 - Saving availability authorizes a later automatic batch; it does not immediately generate a plan.
 - Run the main batch at city-local midnight for the local date two days ahead. Monday's batch targets Wednesday.
 - Enforce event start >= current booking time + 48 hours inside final scheduling. A date offset alone does not satisfy this rule.
-- Query slots intersecting the target day. Clip usable segments to local-day bounds and the notice cutoff; cross-midnight slots must not be booked twice.
-- Allow catch-up/retry processing only while the 48-hour notice and complete one-hour event remain feasible. Do not reshuffle committed plans for late arrivals.
+- Query slots intersecting the target day. Clip usable segments to local-day bounds and the advance-assignment cutoff; cross-midnight slots must not be booked twice.
+- Allow catch-up/retry processing only while the 48-hour advance assignment and the selected activity duration remain feasible within a qualifying shared window. Do not reshuffle committed plans for late arrivals.
 - Show waiting, assigned, and unfilled states. Keep pending, filled, paused, expired, and cancelled lifecycle states.
-- Cancellation closes slots; explicit reopening is required before reconsideration, subject to the notice and assignment rules.
+- Cancellation removes only the withdrawing participant and releases their reservation/date assignment and closes their slot. Preserve the event and others' slots if at least two remain; cancel for the remaining participant if the group drops to one. Serialize/idempotently process concurrent withdrawals, notify after commit, and revoke withdrawn-user contact/feedback access. Do not backfill or rematch automatically; explicit reopening remains subject to assignment rules.
 
 ## 3. Overlap bucket algorithm
 
@@ -40,7 +39,7 @@ This document specifies the revised hackathon MVP target. It replaces the earlie
 - Score candidates by distinct people count plus a capped reconnection bonus. Select the highest score; break ties by larger count, longest common window, earliest start, then stable IDs.
 - For each unique unordered mutual friend pair, use pair_bonus = clamp((days_since_last_meeting - 14) / 46, 0, 1). Initial defaults are zero through 14 days and +1 at 60 days; they are tunable.
 - Add min(sum(pair_bonuses), 0.5 * people_count) to the bucket count. With no bonuses this reduces to largest-first. Recompute unique pairs, bonuses, and the cap whenever people are removed.
-- Use friendship records derived from mutual per-person yes feedback, not manual additions or the directional saved-friend list. Without both yes answers, reconnection bonus is zero. Measure elapsed days at a persisted batch scoring timestamp from the latest completed, non-cancelled shared event end, falling back to friendship creation time only for legacy history gaps (never to bypass mutual-feedback eligibility). Missing/invalid timestamps give zero bonus. Scheduled/cancelled events do not reset recency; completed group events update every participating friend pair. This is a proxy based on recorded history, not knowledge of meetings outside Convene.
+- Use friendship records derived from mutual per-person yes feedback, not manual additions or the directional saved-friend list. Without both yes answers for the latest completed shared event, reconnection bonus is zero, even for established friends. Measure elapsed days at a persisted batch scoring timestamp from the latest completed, non-cancelled shared event end, falling back to friendship creation time only for legacy history gaps (never to bypass mutual-feedback eligibility). Missing/invalid timestamps give zero bonus. Scheduled/cancelled events do not reset recency; completed group events update every non-withdrawn friend pair and become the latest feedback event. This is a proxy based on recorded history, not knowledge of meetings outside Convene.
 - Remove selected people from all other candidates for that planning date, recompute membership/windows, discard candidates below two, and repeat.
 - Buckets have no maximum size. They are provisional pools for the next selection stage.
 - Enforce one assigned event per user per city-local planning date and one event per source slot. Final reservation checks also prevent conflicts across dates/batches.
@@ -50,15 +49,15 @@ This document specifies the revised hackathon MVP target. It replaces the earlie
 
 - Partition each selected bucket into groups of 2–10 using profile embedding similarity. Do not assume unconstrained clustering guarantees these bounds.
 - Initial algorithm: stable seed order, members ranked by mean normalized similarity to the current group plus 0.5 times mean pair reconnection bonus, application target of four, and remainder adjustment to avoid singletons. Use the same bonus snapshot as bucket scoring and normalized shared interests as fallback if embeddings are unavailable. Recompute rankings as members join; keep stable tie-breaking.
-- Reconnection is a soft preference in both bucket selection and final grouping. Do not assume friends sharing a bucket will automatically share an event or force friendship chains into oversized groups. All city, time, notice, deduplication, and group-size rules still apply.
+- Reconnection is a soft preference in both bucket selection and final grouping. Do not assume friends sharing a bucket will automatically share an event or force friendship chains into oversized groups. All city, time, advance assignment, deduplication, and group-size rules still apply.
 - Recompute each final group's full shared window from source availability after partitioning.
-- Use relevant memories to let the LLM rank a small catalog of in-person activities suitable for a one-hour event. Validate structured IDs/duration and retain deterministic alternatives.
+- Use relevant memories to let the LLM rank a small catalog of in-person activities with durations that fit the final shared window. Validate structured IDs/duration and retain deterministic alternatives.
 - Users do not choose activities, budgets, tools, or group sizes. These are not hidden required inputs to the new pipeline.
 - Use Maps/Places to find a venue within the city using the group, activity, and available location context.
 - Do not require travel-radius, route fairness, transportation, personal budget, or accessibility-selection workflows for this hackathon pipeline.
 - Use available opening-hours facts to avoid known closed venues. Label missing data as unverified; never fabricate venue facts or imply a reservation.
 - Retry alternative activities/times within bounded limits. Leave slots unfilled if no plan can be produced.
-- Default final event duration is 60 minutes and must fit the whole group's availability and notice cutoff.
+- Sixty minutes is the minimum bucket overlap, not a fixed/default event duration. The activity determines duration; the whole event must fit the shared window and advance-assignment cutoff.
 
 ## 5. Infrastructure and integrations
 
@@ -74,18 +73,18 @@ Required stack:
 
 Persist durable city/date batch records, leases, retries, slot/profile snapshots, stable group planning IDs, and post-commit notification jobs. Serialize competing passes or use equivalent database claims.
 
-The final transaction must revalidate all group members, slot revisions, pending state, full event containment, and 48-hour notice. Atomically create the event and all participants/reservations, fill slots, and enqueue notifications. Unique planning IDs deduplicate retries; user/date assignment and reservation constraints prevent competing bookings. Extend current pair-only scheduling to groups rather than assuming existing migrations support it.
+The final transaction must revalidate all group members, slot revisions, pending state, full event containment, and 48-hour advance assignment. Atomically create the event and all participants/reservations, fill slots, and enqueue notifications. Unique planning IDs deduplicate retries; user/date assignment and reservation constraints prevent competing bookings. Extend current pair-only scheduling to groups rather than assuming existing migrations support it.
 
 Index pending availability ranges, owner reads, city/date eligibility, ready batch work, and participant/date assignments. Keep external API calls outside booking locks.
 
 ## 6. Contact and notification boundaries
 
 - Normalize and privately store the phone number. Show it only to assigned participants through authenticated plan responses, never public profile cards or AI input.
-- Cancelled plans stop returning participant contacts. Phone ownership verification is outside scope.
+- Cancelled plans and withdrawn participants stop returning participant contacts; withdrawn users lose access even when the event continues and receive no feedback/meeting credit. Phone ownership verification is outside scope.
 - Phone coordination does not imply SMS delivery or an SMS provider.
 - Persist notification work atomically with assignment and send only after commit. Deduplicate event/recipient/type delivery jobs.
 - PWA push needs user permission, device subscriptions, a service-worker handler, and a backend sender. It is not implemented yet and is separate from phone-number sharing.
-- Keep in-app plan status usable when push is unavailable or permission is denied.
+- Keep in-app plan status usable when push is unavailable or permission is denied. The 48-hour guarantee concerns assignment and in-app availability, not notification delivery or receipt.
 
 ## 7. Configuration and verification
 
@@ -97,7 +96,7 @@ Acceptance coverage must include exact 60-minute boundaries, non-round starts, s
 
 Verify reconnection boundaries (14/37/60 days), unordered-pair deduplication, the 50% bucket cap, recalculation after member removal, mutual friendship eligibility, completed-event history and creation-time fallback, retry snapshot stability, and influence on final groups without overriding hard constraints.
 
-Verify unchanged memory generation, generated-memory display, owner-only Edit/Delete and derived-data refresh; per-person feedback participation, missing-as-no, late/concurrent mutual yes and idempotent friendship creation; removal of manual additions; private personal graph data and recency fading without friendship deletion.
+Verify generated-memory title/summary/attribute editing, owner-only Edit/Delete and derived-data refresh, and permitted regeneration after deletion; per-person feedback participation, missing-as-no, late/concurrent mutual yes and idempotent friendship creation; removal of manual additions; private personal graph data and recency fading without friendship deletion. Verify latest-event missing/no disables bonuses, no finalizes the response, late older feedback cannot restore eligibility, and a later mutual yes can. Test three-to-two continuation, two-to-one event cancellation, concurrent withdrawals, and withdrawn-user access revocation.
 
 ## 8. Deferred work
 

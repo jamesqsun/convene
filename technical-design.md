@@ -14,23 +14,23 @@ Retain onboarding interests and answers as inputs to profile embeddings and pref
 
 Provide account creation followed by onboarding that collects basic user data (name, age, city/location, and private international phone number), interests, questions, and short written responses. These answers generate the initial memory sketch. Persist account/profile progress so users can resume onboarding.
 
-Keep memory generation exactly as specified originally: retain the existing question/answer-to-memory extraction, evidence and validation rules, memory structure, and derived embedding process. This revision adds profile presentation and owner corrections; it does not replace extraction prompts, introduce a new generation algorithm, or add an influence attribute. The retained memory-design appendix remains reference material for the original model; its advanced patch operations are not newly required by this change.
 
-The profile's primary view displays readable generated memories rather than raw onboarding answers. Raw answers may remain separately accessible to their owner. Offer only **Edit** and **Delete** on each memory; do not add Use less, devalue, influence weighting, or an archive-only substitute for Delete.
 
-Authenticate ownership for both actions. An edit changes the user-facing memory content and refreshes its affected embeddings and derived profile representation; preserve provenance without presenting edited text as a verbatim original answer. Delete removes the memory and its associated embedding from active storage/retrieval and refreshes derived profile data so it no longer contributes to matching or activity selection. Invalidate stale cached/derived representations before using them for new plans. These actions do not regenerate memories from old answers or silently undo the user's correction during a normal profile read. Already committed plans remain unchanged.
+The profile's primary view displays readable generated memories rather than raw onboarding answers. Raw answers may remain separately accessible to their owner. Display the memory title/topic, summary, and structured attributes. Allow users to edit the title, summary, or individual attributes through **Edit**, or remove the memory through **Delete**; do not add Use less, devalue, influence weighting, or an archive-only substitute for Delete.
+
+Authenticate ownership for both actions. An edit persists the selected title/topic, summary, and attribute changes to the canonical memory, validates attribute types, and refreshes its affected embeddings and derived profile representation; preserve provenance without presenting edited text as a verbatim original answer. Delete removes the memory and its associated embedding from active storage/retrieval and refreshes derived profile data so it no longer contributes to matching or activity selection. Invalidate stale cached/derived representations before using them for new plans. A later memory-generation run may recreate a deleted memory from saved answers in this MVP; no suppression list or permanent deletion-history mechanism is required. Already committed plans remain unchanged.
 
 ### Per-person feedback and the friend graph
 
-After a completed, non-cancelled group hangout, ask each participant **Would you want to meet this person again?** separately for every other participant. Keep activity/general feedback separate. Store directional answers keyed uniquely by (hangout_id, author_user_id, subject_user_id); both users must belong to the event and the author cannot rate themselves.
+After a completed, non-cancelled group hangout, ask each participant **Would you want to meet this person again?** separately for every other participant. Keep activity/general feedback separate. Store directional answers keyed uniquely by (hangout_id, author_user_id, subject_user_id); both users must have remained participants through event completion and the author cannot rate themselves.
 
 For the MVP, an absent answer evaluates as **no** for friendship creation. Both people must explicitly answer yes about each other for the same completed hangout before creating a friendship. Late feedback can complete the pair later. Persist one friendship per normalized unordered user pair, created when the second yes is recorded, with the qualifying event as provenance. Make simultaneous feedback writes/retries idempotent. Remove manual Add friend controls; demo friendships should be backed by seeded completed hangouts and mutual yes feedback.
 
-Missing feedback prevents a new friendship; it does not erase a friendship already established by a previous mutual-yes event. Time decay likewise does not remove friendship. This change does not introduce a later-feedback friendship-removal or blocking workflow. Individual yes/no answers remain private; show the mutual friendship outcome without exposing one person's negative or missing response.
+Missing feedback and explicit no both yield zero reconnection bonus. Missing is pending; an explicit no finalizes that directional response for the event and is not editable in this MVP. Evaluate bonus eligibility from both responses to the pair's latest completed shared hangout (ordered by event end, then stable event ID), not from an older mutual yes. Both latest-event responses must be yes; late feedback on an older event cannot override a newer missing/no response. A yes/yes pair may become eligible again after a later completed hangout. Keep an already established friendship/history visible even while its bonus is zero; time decay does not delete it. No blocking or automatic-pairing exclusion is added by this feedback rule. Individual yes/no answers remain private; show the mutual friendship outcome without exposing one person's negative or missing response.
 
 The personal graph shows the current user's previously connected people from completed shared hangouts, distinguishing connection history from mutual friendships. Do not expose relationships between other users. Lines fade as time since the latest completed shared hangout increases and brighten after another completed shared hangout. Keep old connections visible at a minimum opacity; use a deterministic visual decay rather than adding a memory influence attribute. Label recency as time since the last Convene hangout, not proof of contact outside the app.
 
-Only feedback-established friendships qualify for the reconnection bonus below. Graph opacity is a display property, not friendship status or a separate matching score: an old friendship can have a faded line and a larger reconnection bonus.
+Only feedback-established friendships qualify for the reconnection bonus below. Graph opacity is a display property, not friendship status or a separate matching score: an old friendship with latest-event mutual yes feedback can have a faded line and a larger reconnection bonus.
 
 ## 1. Pipeline
 
@@ -50,7 +50,7 @@ Daily planning batch
 
 Buckets are scheduling pools, not final hangout groups. Buckets have no maximum size; final groups contain 2–10 distinct people. The algorithm favors large pools for similarity grouping and does not guarantee maximum participation, minimum bucket count, or the largest possible minimum bucket size.
 
-## 2. Availability and notice
+## 2. Availability and advance assignment
 
 Store slots using full timestamps rather than independent date and time fields:
 
@@ -77,11 +77,11 @@ At final booking enforce:
 event.starts_at >= booking_time + 48 hours
 ```
 
-This is an absolute elapsed-time guarantee, not merely a date-label comparison. The daily batch normally gives roughly 48–72 hours of notice. Delayed processing, retries, and daylight-saving changes must still satisfy the booking-time check.
+This is an absolute elapsed-time guarantee, not merely a date-label comparison. The daily batch normally assigns plans roughly 48–72 hours before the event. This guarantees advance assignment and availability in the app, not delivery or receipt of a notification 48 hours in advance. Delayed processing, retries, and daylight-saving changes must still satisfy the booking-time check.
 
 Query slots that intersect the target local day, not only slots whose start falls on that day. Clip candidate windows to that day's boundaries and to the current 48-hour cutoff. The clipped starts become candidate start boundaries too. For this MVP, events fit within a single city-local event date; cross-midnight slots may contribute a segment to either date but may only be filled once.
 
-Late submissions can join a catch-up pass only while a complete one-hour event can still satisfy the notice requirement. Catch-up passes process only unassigned people and slots; they do not reshuffle committed events. If no valid window remains before the cutoff, leave the slot visibly unfilled and eventually expire it.
+Late submissions can join a catch-up pass only while a qualifying overlap and the selected activity duration can still satisfy the advance-assignment requirement. Catch-up passes process only unassigned people and slots; they do not reshuffle committed events. If no valid window remains before the cutoff, leave the slot visibly unfilled and eventually expire it.
 
 ## 3. City partitioning
 
@@ -113,9 +113,9 @@ Candidate buckets may share people. They are alternatives under consideration, n
 
 ## 5. Count-based bucket selection with reconnection priority
 
-Prefer opportunities for existing friends to reconnect. Use mutual friendship records created only after both participants explicitly answer yes about each other for the same completed hangout, as defined above. Missing feedback counts as no until an explicit yes arrives. The current private directional saved-friend list and manual additions do not establish eligibility. Seed completed hangouts and mutual feedback for demo friendships; no invitation/acceptance UI is required.
+Prefer opportunities for existing friends to reconnect. Use mutual friendship records created only after both participants explicitly answer yes about each other for the same completed hangout, as defined above. For reconnection scoring, additionally require yes from both people for their latest completed shared event; missing and finalized no both produce zero bonus, even for established friends. The current private directional saved-friend list and manual additions do not establish eligibility. Seed completed hangouts and mutual feedback for demo friendships; no invitation/acceptance UI is required.
 
-For each unique friend pair in a candidate bucket, calculate:
+For each unique friend pair currently eligible through latest-event mutual yes feedback, calculate (all other pairs receive zero):
 
 ```text
 reference_time = latest completed, non-cancelled shared event end
@@ -129,7 +129,7 @@ bucket_score = people_count + bucket_bonus
 
 The initial tunable defaults give no bonus for the first 14 days and reach +1 per pair at 60 days. The total bonus is capped at 50% of the distinct participant count so dense friendship groups cannot accumulate an unbounded advantage. Non-friends receive zero bonus. Use one persisted scoring timestamp/history snapshot per planning pass so retries and tie-breaking remain reproducible. Missing or invalid friendship/history timestamps yield zero bonus rather than invented elapsed time.
 
-Only completed, non-cancelled events ending by the scoring timestamp reset recency; creating, scheduling, or cancelling an event does not. A completed group event counts as a shared meeting for every friend pair among its participants. This is recorded Convene history, not proof that participants attended or that they have not met outside the app. Friendship creation is a documented fallback for legacy history gaps, not a claim of an actual meeting; it never bypasses the requirement for mutual yes feedback.
+Only completed, non-cancelled events ending by the scoring timestamp reset recency; creating, scheduling, or cancelling an event does not. A completed group event counts as a shared meeting for every friend pair among the participants who did not withdraw; it becomes the latest feedback event, so the bonus remains zero until both answers are yes. This is recorded Convene history, not proof that participants attended or that they have not met outside the app. Friendship creation is a documented fallback for legacy history gaps, not a claim of an actual meeting; it never bypasses the requirement for mutual yes feedback.
 
 Examples: six people with no bonus score 6; five people with 1.5 summed pair bonuses score 6.5; three people with 3 summed pair bonuses score 4.5 after the cap. Thus a slightly smaller bucket can win. With all bonuses zero, selection reduces to largest-first.
 
@@ -156,7 +156,7 @@ Example with a 60-minute minimum:
 
 Assuming no reconnection bonuses, candidates include A/B/C at 12:00 with a full shared window of 12:00–14:00, and A/C/D at 14:00 with a shared window of 14:00–15:00. Both score three; the longer-window tie-break selects A/B/C. Removing those people leaves D/E with a full shared window of 14:15–16:00.
 
-Every selected bucket has at least two people. Some people may remain unmatched even when a different arrangement could include them. Greedy count-plus-reconnection selection is a deliberate complexity tradeoff, not a global optimization guarantee. Bonuses never bypass common availability, city, notice, group-size, or booking constraints.
+Every selected bucket has at least two people. Some people may remain unmatched even when a different arrangement could include them. Greedy count-plus-reconnection selection is a deliberate complexity tradeoff, not a global optimization guarantee. Bonuses never bypass common availability, city, advance assignment, group-size, or booking constraints.
 
 Provisional membership is local to the planning pass; it is not a database booking. Persist batch progress for retry recovery. If an entire group fails downstream planning, leave its slots unfilled and defer reconsideration to a bounded later pass rather than repeatedly selecting the same failed group in a loop.
 
@@ -189,7 +189,7 @@ After grouping, recompute each group's common window from its source availabilit
 
 Input: a provisional group, its full shared window, and relevant preference memories.
 
-Convene chooses the activity; users do not select or exclude activities, set budgets, choose tools, or set group-size preferences. For the MVP, use a small application-owned catalog of in-person activities that can support a one-hour hangout. Minimum bucket duration is 60 minutes; the final event must fit the actual shared window. Default event duration is 60 minutes.
+Convene chooses the activity; users do not select or exclude activities, set budgets, choose tools, or set group-size preferences. For the MVP, use a small application-owned catalog of in-person activities with duration metadata. The 60-minute minimum applies to bucket eligibility, not a fixed event length. Choose an activity duration that fits the final group's full shared window; do not truncate an activity to one hour merely because the bucket minimum is one hour.
 
 Have the LLM rank a few catalog activity IDs using the group's interests and memories. Return structured data containing activity IDs, duration, and a short explanation. Validate IDs and duration server-side; keep a deterministic catalog fallback. Do not pass phone numbers, exact home locations, or unrelated private memories to the model. User-facing explanations must not expose another person's raw answers or private feedback.
 
@@ -201,7 +201,7 @@ Input: provisional group, ranked activities, city, relevant locations, and share
 
 Use Maps/Places to find a real venue for the selected activity within the city. Assume city-level reachability; do not calculate personal travel limits or require transportation/budget/group-size settings. Prefer a sensible location relative to participants when location data is available.
 
-Choose an exact one-hour event interval inside the common window. Use available provider opening-hours information to avoid known closed venues. Missing hours must remain explicitly unverified; the LLM must not invent venue facts. A search result is not a reservation or capacity guarantee.
+Choose an exact event interval with the selected activity's duration, wholly inside the common window. Use available provider opening-hours information to avoid known closed venues. Missing hours must remain explicitly unverified; the LLM must not invent venue facts. A search result is not a reservation or capacity guarantee.
 
 If no suitable result is found, try another ranked activity or another time within the shared window, with bounded attempts. If all attempts fail, leave the group unassigned. Seeded fictional venues may be used in an explicitly labeled demo fallback; they must not be presented as verified real places.
 
@@ -223,13 +223,13 @@ Maps and LLM calls happen outside database locks. The final transaction:
 
 A unique stable group planning ID makes retries idempotent, while participant/date uniqueness and reservation constraints prevent competing proposals from booking the same people. A unique batch key alone is insufficient. All participant assignments succeed or the transaction rolls back.
 
-Retain pending/filled/paused/expired/cancelled lifecycle states. Cancellation releases reservations and closes participating slots; it must not immediately rematch people. Explicit reopening may make slots eligible again only if notice and date-assignment rules permit it. Completed events continue to count toward the daily assignment limit.
+Retain pending/filled/paused/expired/cancelled lifecycle states. A participant cancellation removes only that participant from an upcoming event, releases their reservation/date assignment, and closes their source slot. If at least two participants remain, preserve the event, other reservations, and other filled slots without automatic backfilling. If only one remains (or none after concurrent withdrawals), cancel the event and release/close the remaining reservations/slots. Serialize withdrawals under an event lock so concurrent cancellations cannot leave an active singleton. Notify affected participants after commit; repeated cancellation requests are idempotent. Do not automatically rematch anyone. Explicit reopening may make slots eligible again only if advance-assignment and date-assignment rules permit it. Completed events continue to count toward the daily assignment limit.
 
 Existing range and owner indexes remain useful. Add indexes for city/date eligibility, batch claims, and participant/date assignments as the schema evolves. Group scheduling requires changing the current pair-only transaction contract; existing migrations do not already implement this design.
 
 ## 10. Contact privacy and notifications
 
-Collect a normalized international phone number and share it only with participants in an assigned event. There is no communication-platform picker. Keep phone numbers out of public profiles, embeddings, and LLM prompts. Cancelled events stop returning participant contacts. Phone ownership verification is outside the demo scope.
+Collect a normalized international phone number and share it only with participants in an assigned event. There is no communication-platform picker. Keep phone numbers out of public profiles, embeddings, and LLM prompts. Cancelled events stop returning participant contacts. A withdrawn participant loses contact access immediately and is no longer returned as an event contact to others, even if the event continues. Historical membership retained for audit does not grant contact, feedback, or completed-meeting credit. Phone ownership verification is outside the demo scope.
 
 Notification delivery runs after commit and must be deduplicated by event/recipient/type. Phone coordination does not imply automated SMS. Mobile PWA push requires permission, stored per-device push subscriptions, and a backend sender; that feature remains unimplemented. In-app status remains available independently of push permission. Do not describe an event as delivered to a device merely because it was committed.
 
@@ -237,16 +237,16 @@ Notification delivery runs after commit and must be deduplicated by event/recipi
 
 Retain Next.js, React, TypeScript, Tailwind, Supabase Auth/Postgres, pgvector, and OpenAI. Use Maps/Places for the new location pipeline. Supabase is the source of truth for profiles, slots, batches, events, participants, reservations, and feedback. Profile embeddings and memories support selection and activity reasoning.
 
-All mutations go through authenticated and validated server routes. Use owner/participant access controls and RLS. Service-role credentials and provider keys remain server-only. LLM output is a validated proposal, never a direct database write. Extend private feedback storage with per-person answers and mutual friendship derivation. Include the personal connection graph and owner memory Edit/Delete operations; advanced automatic memory patching, social-graph optimization, and friendship invitation/acceptance UI remain deferred. Preserve the original memory-generation contract.
+All mutations go through authenticated and validated server routes. Use owner/participant access controls and RLS. Service-role credentials and provider keys remain server-only. LLM output is a validated proposal, never a direct database write. Extend private feedback storage with per-person answers and mutual friendship derivation. Include the personal connection graph and owner memory Edit/Delete operations; advanced automatic memory patching, social-graph optimization, and friendship invitation/acceptance UI remain deferred.
 
 No schema migration or runtime change is made by this document. Legacy data and restrictions require an explicit migration plan before switching the running application to the narrowed contract; this document does not authorize silently clearing stored user data.
 
 ## 12. Acceptance checks
 
-- Account creation/onboarding captures basic data including age, location, and phone plus short written answers; original memory generation and evidence validation remain unchanged.
+- Account creation/onboarding captures basic data including age, location, and phone plus short written answers; generated memories retain evidence validation.
 - Profile shows generated memories with only Edit/Delete correction actions. Ownership checks reject cross-user mutations; edited/deleted memories and affected derived embeddings cannot leave stale preferences in new planning.
 - Feedback is per other participant; self/nonparticipant feedback is rejected. Missing, one-sided yes, and yes/no pairs do not create friendship. A second explicit yes for the same event creates exactly one friendship even under retries/concurrency.
-- Manual friend addition is absent. Only mutual-feedback friendships activate reconnection priority; later missing feedback and visual decay do not delete an established friendship.
+- Manual friend addition is absent. Only mutual-feedback friendships activate reconnection priority; latest-event missing/no feedback gives zero bonus without deleting an established friendship; explicit no is final for that event, older late answers cannot override newer feedback, and later mutual yes can restore eligibility.
 - Personal graph includes completed connection history, distinguishes friends, and fades/refreshes lines using completed-event recency without revealing others' private feedback or third-party relationships.
 
 - Saving availability waits for the batch rather than immediately creating a plan.
@@ -265,6 +265,8 @@ No schema migration or runtime change is made by this document. Legacy data and 
 - Maps/LLM failures leave recoverable unfilled slots; invalid activity or venue IDs are rejected.
 - Concurrent workers, stale edits, and crash retries cannot create duplicate or conflicting events.
 - Every group assignment is atomic and notification retries are deduplicated.
+- Withdrawing from three participants leaves two and keeps their event; withdrawing from two cancels the singleton. Concurrent/repeated withdrawals are safe, and withdrawn users lose contacts, feedback eligibility, and meeting credit.
+- Memory field edits update canonical attributes and embeddings; later generation may recreate deleted memories. Assignment lead time is not described as guaranteed notification delivery.
 - Participant phone numbers remain private outside assigned-plan access.
 
 ## Appendix: Preference memory design (retained roadmap)

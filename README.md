@@ -1,6 +1,6 @@
 # Convene
 
-> **Planning rework agreed, implementation pending:** [Technical design](technical-design.md), [technical requirements](technical-requirements.md), and [product overview](overview.md) now specify daily city-based batches, at least 48 hours' notice, one-hour overlap buckets, and in-person groups with phone coordination. The target removes activity, budget, group-size, platform/tool, mode, travel-radius, and connection-category controls, plus online and blocking workflows. The instructions below describe the current runnable implementation, which still includes those older features. Track the transition in [IMPLEMENTATION.md](IMPLEMENTATION.md).
+> **Planning rework agreed, implementation pending:** [Technical design](technical-design.md), [technical requirements](technical-requirements.md), and [product overview](overview.md) now specify daily city-based batches, assignment at least 48 hours ahead, one-hour minimum overlap buckets, and in-person groups with phone coordination. The target removes activity, budget, group-size, platform/tool, mode, travel-radius, and connection-category controls, plus online and blocking workflows. The instructions below describe the current runnable implementation, which still includes those older features. Track the transition in [IMPLEMENTATION.md](IMPLEMENTATION.md).
 
 **You give Convene time. Convene turns it into plans.**
 

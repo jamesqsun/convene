@@ -8,7 +8,7 @@ Convene removes the coordination work of meeting people: comparing schedules, ch
 
 This is the agreed target as of September 26, 2026. The pipeline rework is not implemented yet. README.md documents the current running application, IMPLEMENTATION.md tracks the transition, and technical-design.md specifies the new algorithm.
 
-Users create an account and complete onboarding with name, age, city/location, private phone number, interests, questions, and short written answers. Keep the original memory-generation process unchanged to create the initial memory sketch. Users then submit dated availability. For scheduling, availability is the only choice they make. Convene chooses the other people, activity, venue, and exact time.
+Users create an account and complete onboarding with name, age, city/location, private phone number, interests, questions, and short written answers. Their answers generate the initial memory sketch. Users then submit dated availability. For scheduling, availability is the only choice they make. Convene chooses the other people, activity, venue, and exact time.
 
 Hangouts are in-person only. Phone numbers provide participant coordination. The MVP assumes people can reach venues within their city.
 
@@ -17,37 +17,37 @@ Remove activity selections/exclusions, budgets, preferred group sizes, tool/plat
 ## Planning flow
 
 1. Saving availability queues the user for a daily planning batch.
-2. At midnight in each city's time zone, plan for the local date two days ahead. Every final assignment must still provide at least 48 elapsed hours of notice.
+2. At midnight in each city's time zone, plan for the local date two days ahead. Plans must be assigned and available in the app at least 48 hours before they start; notification delivery or receipt is not guaranteed at that time.
 3. Find candidate groups sharing at least one hour. Use actual availability start boundaries rather than fixed hourly slots.
 4. Select the highest-scoring time bucket using people count plus a capped bonus for friends who have not met recently, remove its people from other candidates, and repeat. Every selected bucket has at least two distinct people and retains its full shared window.
 5. Split each bucket into groups of 2–10 using profile similarity and reconnection priority so overdue friends are more likely to share the final event. Group size is chosen by the application.
-6. Use relevant preference memories to rank in-person activities suitable for a one-hour event.
+6. Use relevant preference memories to rank in-person activities whose duration fits the group's shared window.
 7. Find a venue in the city with Maps/Places and select an exact time inside shared availability.
 8. Save the group event atomically and notify participants after assignment. PWA push requires separate implementation.
 
-For example, availability beginning at 11:10 is valid; there is no requirement to start on the hour. One hour is the minimum overlap and default event duration, not a start-time grid.
+For example, availability beginning at 11:10 is valid; there is no requirement to start on the hour. One hour is the minimum bucket overlap, not a fixed event duration or a start-time grid. The selected activity determines the event duration.
 
 The MVP assigns at most one hangout per person per planning date and one per availability slot. Candidate buckets can overlap during evaluation, but selected buckets do not share people. People without a viable bucket remain unmatched.
 
 Count-based selection with a reconnection bonus is a deliberate simplification: it favors larger pools and overdue friendships but may match fewer people than another arrangement. It does not optimize the smallest bucket globally. Without friendship bonuses it reduces to largest-first.
 
-The initial reconnection bonus is zero for the first 14 days since a friend's last completed shared hangout, then grows linearly to +1 per unique friend pair at 60 days. The total bucket bonus is capped at half the participant count. Friendship and bonus eligibility begin only after both people explicitly answer yes about meeting each other again for the same completed hangout. Missing feedback counts as no. Scheduled and cancelled plans do not count as meetings. Reconnection also influences final grouping, but is a preference rather than a guarantee; all availability and group-size rules still hold.
+The initial reconnection bonus is zero for the first 14 days since a friend's last completed shared hangout, then grows linearly to +1 per unique friend pair at 60 days. The total bucket bonus is capped at half the participant count. Friendship and bonus eligibility begin only after both people explicitly answer yes about meeting each other again for the same completed hangout. Missing and explicit no both give zero reconnection bonus for the latest completed shared event; an explicit no finalizes that event's response. Scheduled and cancelled plans do not count as meetings. Reconnection also influences final grouping, but is a preference rather than a guarantee; all availability and group-size rules still hold.
 
 ## User experience
 
-Show when a slot is waiting for its batch, when a plan is assigned, and when no plan was found. Users can edit or pause unassigned slots. Late additions are considered only if a complete event can still meet the 48-hour notice rule. Existing plans stay stable.
+Show when a slot is waiting for its batch, when a plan is assigned, and when no plan was found. Users can edit or pause unassigned slots. Late additions are considered only if a complete event can still meet the 48-hour advance-assignment rule. Existing plans stay stable.
 
-Assigned-plan details show the people, activity, venue, time, and private participant phone contacts. Cancellation closes slots rather than immediately creating replacement plans.
+Assigned-plan details show the people, activity, venue, time, and private participant phone contacts. Cancelling removes only that person and closes their slot. The event continues if at least two people remain; if it drops to one, cancel it for the remaining person too. Release affected reservations and notify participants without automatic backfilling or replacement plans.
 
-After a group hangout, ask Would you want to meet this person again? for each other participant individually. Both must answer yes to become friends automatically; users do not manually add friends. Late answers can establish mutual interest later. Missing feedback prevents creating a friendship but does not erase one already established.
+After a group hangout, ask Would you want to meet this person again? for each other participant individually. Both must answer yes to become friends automatically; users do not manually add friends. Late answers can establish mutual interest later. Missing feedback prevents creating a friendship but does not erase one already established. For an established friendship, both answers to the latest completed shared event must be yes to receive a reconnection bonus. Missing and explicit no both disable the bonus; missing is pending, while no is final for that event. Older late feedback cannot override a newer event, but mutual yes after a later hangout can restore eligibility.
 
-The personal friend graph shows people the user has connected with and distinguishes mutual friendships. Lines fade with time since the last completed shared Convene hangout and brighten after meeting again, while old connections stay visible. Fading does not remove friendship; overdue friends can gain reconnection priority. Do not display others' private feedback or relationships between other users.
+The personal friend graph shows people the user has connected with and distinguishes mutual friendships. Lines fade with time since the last completed shared Convene hangout and brighten after meeting again, while old connections stay visible. Fading does not remove friendship; overdue friends with latest-event mutual yes feedback can gain reconnection priority. Do not display others' private feedback or relationships between other users.
 
-The profile displays generated memories rather than making raw answers the main view. Users can Edit or Delete their own memories. No Use less or separate influence attribute is included. Update affected embeddings/derived profile data so corrections are reflected in future planning and deleted memories stop influencing it. Memory generation itself stays the same as the original spec.
+The profile displays generated memories rather than making raw answers the main view. Display each memory's title/topic, summary, and attributes so users can edit a single attribute or other field, or delete the memory. No Use less or separate influence attribute is included. Update affected embeddings/derived profile data so corrections are reflected in future planning and deleted memories stop influencing it. Later generation may recreate a deleted memory from saved answers in this MVP.
 
 ## Implementation boundaries
 
-Use AI for preference interpretation and activity ranking. Use backend code for availability, notice, group-size validation, deduplication, privacy, and booking. Maps provides venue facts; do not invent venues or imply reservations.
+Use AI for preference interpretation and activity ranking. Use backend code for availability, advance assignment, group-size validation, deduplication, privacy, and booking. Maps provides venue facts; do not invent venues or imply reservations.
 
 The stack remains Next.js, React, TypeScript, Tailwind, Supabase, pgvector, and OpenAI, with Maps/Places added for the new location flow. Retain the mobile-first PWA approach. Native app distribution is not required.
 

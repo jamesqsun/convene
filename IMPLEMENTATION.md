@@ -10,20 +10,23 @@ The September 26 target in technical-design.md and technical-requirements.md sup
 - [ ] Replace multi-app contact setup with private phone-only participant coordination; remove online planning, blocking, and separate friendship invitation workflows from the revised demo scope; retain mutual per-person feedback.
 - [ ] Define a migration for existing data and disable immediate pair matching when the batch pipeline is enabled.
 - [ ] Add normalized city/time-zone partitioning, daily local-date batches, late-arrival handling, and durable retry recovery.
-- [ ] Enforce at least 48 elapsed hours' notice at final booking, including retries and DST boundaries.
+- [ ] Enforce at least 48 elapsed hours' advance assignment (not guaranteed notification receipt) at final booking, including retries and DST boundaries.
 - [ ] Generate buckets at submitted/clipped start boundaries with a 60-minute minimum; preserve full common windows.
 - [ ] Select buckets by people count plus capped reconnection bonus with stable tie-breaking; recompute membership, pairs, scores, and windows after removals and discard counts below two.
 - [ ] Add per-person group feedback; treat missing as no and create a unique friendship only after mutual explicit yes for the same completed event. Remove manual friend addition and seed demo friends through completed events/mutual feedback.
 - [ ] Use feedback-derived friendships and completed shared-event recency for reconnection, with a stable per-pass history snapshot and creation-time fallback only for legacy history gaps.
 - [ ] Add the personal connection graph with friendship indicators and lines that fade/brighten by shared-event recency without deleting established friendships or exposing private responses.
-- [ ] Complete account creation/resumable onboarding for name, age, location, phone, interests, and written answers while preserving original memory generation.
-- [ ] Show generated memories in profile with owner-only Edit/Delete; refresh affected embeddings/derived profile data. Do not add influence attributes or Use less controls.
+- [ ] Complete account creation/resumable onboarding for name, age, location, phone, interests, and written answers and initial memory generation.
+- [ ] Show generated memory title/topic, summary, and attributes in profile with owner-only field editing and Delete; refresh affected embeddings/derived profile data. Do not add influence attributes or Use less controls.
 - [ ] Apply initial 14-to-60-day pair bonus ramp (0 to 1), cap total bucket bonus at 50% of participant count, and verify pair deduplication and score boundaries.
 - [ ] Enforce one event per person/planning date and per slot, including multiple-slot and cross-midnight deduplication.
 - [ ] Partition buckets using normalized profile similarity plus reconnection priority into groups of 2–10 without singletons; recalculate member rankings and final group windows.
-- [ ] Add structured activity ranking, one-hour event defaults, Maps venue search, and bounded fallback behavior.
+- [ ] Add structured activity ranking, activity-derived durations within shared availability, Maps venue search, and bounded fallback behavior.
 - [ ] Extend atomic pair booking to all group members with stale-snapshot checks, unique planning IDs, and conflict protection.
 - [ ] Persist deduplicated notification jobs with assignment; implement mobile push separately from phone contact sharing.
+- [ ] Enforce latest-shared-event mutual yes for reconnection bonuses; missing/no both disable them, no finalizes that event response, and older late feedback cannot override newer results.
+- [ ] Support individual withdrawals, preserve events with at least two remaining, and atomically cancel singleton events; revoke withdrawn-user contacts/feedback and meeting credit.
+- [ ] Allow later memory generation to recreate deleted memories; do not implement permanent suppression for the MVP.
 - [ ] Update runnable setup documentation and verify the new flow locally and against hosted services.
 
 ## First working release
@@ -103,11 +106,11 @@ The automatic slot flow is implemented locally. Hosted Supabase and scheduler ve
 ## Later milestones
 
 - [ ] Recurring availability / calendar OAuth and synchronization
-- [ ] Live Places provider, verified venue hours, and travel-time routing
-- [ ] Group matching and social-time allocation across a week
+- [ ] Advanced venue verification and travel-time routing (basic live Places search is part of the revised MVP above)
+- [ ] Social-time allocation across a week (group matching is part of the revised MVP above)
 - [ ] Granular memory merge/archive operations and semantic memory retrieval
 - [ ] Adaptive LLM follow-up conversation (current onboarding uses two written prompts)
-- [ ] Mutual reconnection consent and relationship cadence ranking
+- [ ] Advanced relationship cadence optimization (mutual per-person feedback and capped reconnection priority are part of the revised MVP above)
 - [ ] Push/email notifications, reporting/moderation tools, and account deletion UI
 - [ ] Production query/load tuning, UI history pagination, queue retention/monitoring, and distributed rate limiting
 - [ ] International matching and translation
