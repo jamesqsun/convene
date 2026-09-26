@@ -77,6 +77,14 @@ deterministic fallback; `venues/plan-venue` picks venue and exact time with boun
 (`batch/due.ts`), persist proposals before any external call, commit each group, drain push jobs.
 No database transaction is ever open around a model or Maps call.
 
+**Calendar integration** (`src/features/calendar/`): Google OAuth with refresh tokens encrypted
+by `src/lib/secrets.ts`, a picker over the person's calendars, busy blocks cached in `busy_blocks`
+and refreshed by the tick when stale, a live re-check before every commit, and matched hangouts
+mirrored into a dedicated Convene calendar (`event_calendar_entries`). Weekly availability lives in
+`src/features/availability/weeks.ts` (server) and `week-grid.ts` (pure, shared with the browser);
+`materializeWeeks` copies a person's latest week forward when the planner's target week is unset.
+Demo mode uses `calendar/fake.ts`, whose busy pattern is fixed per weekday.
+
 **Scheduler entry point:** `POST` or `GET /api/jobs/run` with `Authorization: Bearer CRON_SECRET`
 (hidden in demo mode; `POST /api/demo/run-jobs` is the signed-in demo equivalent). `scripts/worker.ts`
 calls it on a cadence; `vercel.json` schedules Vercel Cron.

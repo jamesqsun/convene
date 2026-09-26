@@ -31,15 +31,25 @@ memories, availability for the next two planning dates, and two completed past h
 friendships exist with real provenance. Everything lives in server memory and resets on restart.
 No external service is ever contacted in demo mode, even if keys are present in `.env.local`.
 
+### Google Calendar and your week
+
+Availability is set per week on a Monday-to-Sunday grid in your city's time zone: paint the
+half-hours you are free and save. Weeks you never set are copied automatically from your most
+recent week when planning runs (turn this off with the checkbox on the Availability page). With a
+Google account connected, busy events from the calendars you tick are subtracted from your windows
+before planning, checked again live right before a booking, and every assigned hangout is written
+to a dedicated "Convene" calendar in your account and removed if you withdraw. Demo mode connects
+Maya and Ben to a fictional calendar so the overlay is visible without Google.
+
 ### Try the whole loop
 
 1. On the sign-in page, tap a persona chip (start with **Maya**). Or create an account and walk
    through onboarding: name and age, city, phone, interests, three written answers, then the
    memory sketch is generated.
-2. **Availability** shows the seeded windows waiting for their batch, with the time the batch runs.
-   Add a window of your own; it is saved in your city's time zone and must end more than 49 hours
-   from now. Tap **Run planning now (demo)** to execute the batch immediately instead of waiting for
-   midnight.
+2. **Availability** shows the week grid with Maya's seeded windows, the fictional calendar's busy
+   time in amber, and cells too soon to plan greyed out. Drag across cells to paint or clear, save
+   the week, or step to next week. Tap **Run planning now (demo)** to execute the batch immediately
+   instead of waiting for midnight.
 3. A banner announces the new plan. **Plans** shows the activity, the fictional venue (labelled as
    such, with unverified hours), the exact time, the other people with their interests, and their
    phone numbers. **Withdraw** removes only you; the plan survives if two people remain.
@@ -86,16 +96,31 @@ CONVENE_SMOKE_URL=http://localhost:3005 pnpm smoke
    slots, and queues push jobs. A stable planning id makes retries idempotent.
 8. Push jobs are sent after commit with per-device tracking, retirement of dead subscriptions, and
    bounded backoff. In-app status never depends on push.
+9. Each tick also carries availability forward for people who have not set the week the planner
+   targets, refreshes connected calendars that are more than thirty minutes stale, and mirrors new
+   and cancelled hangouts into people's Convene calendars.
 
 Events complete automatically at their end time (derived, no worker needed). Withdrawal is only
 possible before the start; attendance is assumed afterwards.
+
+## Google Cloud setup for calendar sync
+
+1. Create a project at https://console.cloud.google.com and enable the **Google Calendar API**.
+2. Under **OAuth consent screen**, choose External, add the scopes
+   `https://www.googleapis.com/auth/calendar`, `openid`, and `email`, and add every tester as a test
+   user while the app is in Testing status (Google shows an "unverified app" screen they click through).
+3. Under **Credentials**, create an OAuth client of type Web application with the redirect URI
+   `http://localhost:3000/api/calendar/google/callback` (plus your deployed origin and the same path).
+4. Put the client id and secret in `.env.local` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`,
+   and set `CALENDAR_TOKEN_SECRET` to a random string of at least 32 characters (it encrypts stored
+   refresh tokens). Without these three, connected mode hides the calendar card.
 
 ## Connect Supabase, OpenAI, Google Places, and push
 
 1. Create a Supabase project. Enable the email/password provider and set the Site URL.
 2. Copy `.env.example` to `.env.local`, set `CONVENE_MODE=supabase`, and fill in `DATABASE_URL`
    (the transaction pooler URL on Vercel), the Supabase URL and keys, and `CRON_SECRET`.
-   `OPENAI_API_KEY`, `GOOGLE_PLACES_API_KEY`, and the VAPID keys are optional: without them the app
+   `OPENAI_API_KEY`, `GOOGLE_PLACES_API_KEY`, the Google Calendar keys, and the VAPID keys are optional: without them the app
    uses interest-only planning, the fictional venue provider, and a logging push sender.
    Generate VAPID keys with `node -e "console.log(require('web-push').generateVAPIDKeys())"`.
 3. Apply the schema and seed the fictional pool (personas become real accounts with `SEED_PASSWORD`):
