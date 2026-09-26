@@ -51,6 +51,7 @@ describe('resetSeededWorld', () => {
         people: 12,
         slots: 22,
         historyEvents: 2,
+        calendarsConnected: 0,
       })
       expect(await Promise.all(resetTables.map((table) => count(db, table)))).toEqual(baseline)
       expect(await count(db, 'auth.users')).toBe(12)
@@ -61,7 +62,7 @@ describe('resetSeededWorld', () => {
     expect(admin.createUser).toHaveBeenCalledWith(
       expect.objectContaining({ password: 'reset-password', email_confirm: true }),
     )
-    expect(await count(db, 'schema_migrations')).toBe(11)
+    expect(await count(db, 'schema_migrations')).toBe(12)
   })
 
   it('fails before deletion if API and database users do not match', async () => {
@@ -101,6 +102,7 @@ describe('resetSeededWorld', () => {
       people: 12,
       slots: 22,
       historyEvents: 2,
+        calendarsConnected: 0,
     })
   })
 })
