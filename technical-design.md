@@ -39,6 +39,7 @@ These are not strictly required, but they make the product feel much more compel
 - Basic social-time allocation, such as new people vs. existing friends
 - Activity preference refinement after feedback
 - Mock calendar view showing generated events
+- Live venue search with a Places API
 
 ### Tier 3: Nice to Have
 
@@ -54,14 +55,14 @@ These improve polish or depth but should only be built after the core loop works
 - More nuanced feedback questions
 - Profile correction UI
 - Multiple generated plan options
+- Travel-time based location fairness
 
 ### Tier 4: Likely Out of Scope for MVP
 
 These are valuable long term but too expensive or risky for the first version.
 
 - Real Google Calendar write access
-- Live venue search
-- Real-time maps/travel-time optimization
+- Advanced real-time maps/travel-time optimization
 - Live event discovery
 - Payments or reservations
 - User-to-user chat
@@ -220,7 +221,7 @@ Possible fields:
 - `start_time`
 - `end_time`
 - `recurrence`
-- `social_goal`
+- `default_connection_goal`
 - `location_constraint`
 - `online_allowed`
 - `in_person_allowed`
@@ -238,7 +239,7 @@ Example:
     "days": ["friday"],
     "until": "2026-12-01"
   },
-  "social_goal": "meet_new_people",
+  "default_connection_goal": "meet_new_people",
   "location_constraint": {
     "type": "near_user",
     "max_distance_miles": 5
@@ -480,6 +481,93 @@ Example:
   "created_at": "2026-09-23T19:00:00Z"
 }
 ```
+
+### Venue Candidate
+
+Represents a normalized physical venue returned by a Places provider, cache, or seeded demo/test catalog.
+
+Convene should not treat venue candidates as permanent owned data. They are provider-backed facts used during location planning.
+
+Possible fields:
+
+- `venue_id`
+- `provider`
+- `provider_place_id`
+- `name`
+- `category`
+- `address`
+- `lat`
+- `lng`
+- `price_level`
+- `rating`
+- `hours`
+- `tags`
+- `travel_times_minutes`
+- `open_during_slot`
+- `provider_url`
+- `missing_fields`
+
+Example:
+
+```json
+{
+  "venue_id": "place_901",
+  "provider": "google_places",
+  "provider_place_id": "ChIJ123",
+  "name": "Meeple & Mug",
+  "category": "board_game_cafe",
+  "address": "123 Peachtree St NE, Atlanta, GA",
+  "lat": 33.7812,
+  "lng": -84.3868,
+  "price_level": "$$",
+  "rating": 4.6,
+  "hours": {
+    "friday": [["12:00", "23:00"]]
+  },
+  "tags": ["board_games", "coffee", "conversation_friendly"],
+  "travel_times_minutes": {
+    "user_001": 14,
+    "user_014": 18
+  },
+  "open_during_slot": true,
+  "provider_url": "https://maps.example/place/ChIJ123",
+  "missing_fields": []
+}
+```
+
+### Venue Cache Record
+
+Represents a short-lived cached copy of normalized provider venue data.
+
+Possible fields:
+
+- `provider`
+- `provider_place_id`
+- `fetched_at`
+- `expires_at`
+- `normalized_venue`
+
+Example:
+
+```json
+{
+  "provider": "google_places",
+  "provider_place_id": "ChIJ123",
+  "fetched_at": "2026-09-23T20:00:00Z",
+  "expires_at": "2026-09-24T20:00:00Z",
+  "normalized_venue": {
+    "name": "Meeple & Mug",
+    "address": "123 Peachtree St NE, Atlanta, GA",
+    "lat": 33.7812,
+    "lng": -84.3868,
+    "hours": {
+      "friday": [["12:00", "23:00"]]
+    }
+  }
+}
+```
+
+Cached venue data should be refreshed before final scheduling, especially for hours and open status.
 
 ### Hangout
 
@@ -1342,7 +1430,7 @@ The activity filter should guide candidate scoring and activity planning, but it
 
 An activity planning agent can use the structured filter directly. The natural-language `label` and `raw_text` preserve user language, while `activity_type`, `tags`, `attributes`, and `strength` give deterministic code enough structure to retrieve activities, score candidates, and reject clear mismatches.
 
-For MVP, this can be chosen from the user's availability block or simple social-time allocation settings.
+For an initial implementation, this can be chosen from the user's availability block or simple social-time allocation settings.
 
 ### Candidate Generation
 
@@ -1387,7 +1475,7 @@ Compatibility should be calculated from multiple components, not one semantic sc
 Possible score components:
 
 - Preference fit
-- Activity fit
+- Activity filter fit
 - Availability fit
 - Distance fit
 - Social style fit
@@ -1399,7 +1487,7 @@ Example:
 ```text
 compatibility_score =
   (0.35 * preference_fit) +
-  (0.20 * activity_fit) +
+  (0.20 * activity_filter_fit) +
   (0.15 * availability_fit) +
   (0.10 * distance_fit) +
   (0.10 * social_style_fit) +
@@ -1452,7 +1540,7 @@ Availability should be checked before expensive compatibility scoring. Schedulin
 - Support online and in-person plans.
 - Respect activity duration.
 - Avoid double-booking users.
-- Prefer times that match the user's social goals and activity context.
+- Prefer times that match the user's connection goal and activity context.
 - Produce a clear scheduled hangout object.
 
 ### Early Availability Filtering
@@ -1587,7 +1675,7 @@ Block fields relevant to scheduling:
 - `start_time`
 - `end_time`
 - `recurrence`
-- `social_goal`
+- `default_connection_goal`
 - `location_constraint`
 - `online_allowed`
 - `in_person_allowed`
@@ -1635,7 +1723,7 @@ slot_score =
   (0.20 * activity_time_fit) +
   (0.15 * soonness) +
   (0.15 * buffer_quality) +
-  (0.10 * social_goal_fit) +
+  (0.10 * connection_goal_fit) +
   (0.10 * travel_feasibility)
 ```
 
@@ -1723,7 +1811,7 @@ Activity candidates can come from:
 - Shared interests
 - Complementary interests
 - Known activity catalog
-- Event/venue search later
+- Event/activity discovery later
 - Online platform availability
 
 ### Hard Activity Filters
@@ -1888,7 +1976,7 @@ The location planner receives:
 - Transportation modes
 - Budget preferences
 - Venue category
-- Maps/Places API results or seeded venue catalog
+- Maps/Places API results, venue cache results, or seeded demo/test venue catalog
 
 ### Maps / Places API Integration
 
@@ -1999,7 +2087,7 @@ Legacy or fallback candidate sources:
 
 - Google Places API
 - Yelp/Foursquare/Mapbox APIs
-- Seeded venue catalog
+- Seeded demo/test venue catalog
 - Event APIs
 
 For each venue candidate, store:
@@ -2146,7 +2234,7 @@ Input:
 
 Output:
 
-- Raw venue candidates from a seeded database or external API.
+- Raw venue candidates from a live provider, short-lived cache, or seeded demo/test catalog.
 
 Provider options:
 
@@ -2238,6 +2326,16 @@ Responsibilities:
 - Never allow the LLM to override hard failures.
 - Preserve rejection reasons for debugging and fallback behavior.
 
+Filter examples:
+
+- Venue is closed during the proposed time.
+- Venue is too far for one or more participants.
+- Venue category does not match the selected activity.
+- Venue exceeds budget constraints.
+- Venue is missing required accessibility support.
+- Venue is not appropriate for the social context.
+- Travel time imbalance is too high.
+
 Example rejection:
 
 ```json
@@ -2311,20 +2409,6 @@ The LLM should not:
 - Use private user details in the explanation.
 
 If the LLM output references a venue ID not in the provided candidate list, the backend should reject the output and fall back to the top deterministic venue.
-
-### Hard Location Filters
-
-Remove venues that cannot work.
-
-Examples:
-
-- Venue is closed during the proposed time.
-- Venue is too far for one or more participants.
-- Venue category does not match the selected activity.
-- Venue exceeds budget constraints.
-- Venue is missing required accessibility support.
-- Venue is not appropriate for the social context.
-- Travel time imbalance is too high.
 
 ### Location Scoring
 
@@ -2881,7 +2965,7 @@ Maya wants to meet new people Friday evening.
 
 - Implement activity catalog.
 - Implement activity planner.
-- Implement seeded venue provider.
+- Implement seeded demo/test venue provider.
 - Implement location scoring and travel fairness.
 - Add Maps/Places API if time allows.
 
@@ -2905,7 +2989,7 @@ The smallest satisfying slice:
 6. Filter candidates by overlap.
 7. Pick from top compatible users.
 8. Pick activity.
-9. Pick seeded venue if needed.
+9. Pick seeded demo/test venue if needed.
 10. Generate hangout.
 11. Collect feedback.
 
@@ -2915,4 +2999,938 @@ The smallest satisfying slice:
 - How much profile editing should users have in the first version?
 - Should activity filters be explicit UI controls or natural-language input first?
 - Which Places provider should be used if live venue search is added?
-- What privacy boundaries should exist around explanations?
+
+## 12. Privacy and Safety Policy
+
+Convene handles sensitive social data: user preferences, availability, location, relationships, feedback, and inferred personality signals. The system should minimize what it exposes, explain decisions without revealing private details, and enforce safety constraints before matching or planning.
+
+### Privacy Principles
+
+- Only collect data needed for planning.
+- Do not expose one user's private preference memories to another user.
+- Do not reveal negative feedback directly.
+- Do not show inferred sensitive traits.
+- Use explanations based on shared or non-sensitive signals.
+- Keep location sharing coarse until a hangout is confirmed.
+- Allow users to delete or correct profile memories.
+
+### Explanation Privacy
+
+Match explanations should use shared and non-sensitive signals.
+
+Allowed:
+
+> You both enjoy low-pressure games and are free Friday evening.
+
+Not allowed:
+
+> Alex said they are lonely and trying to make friends.
+
+Allowed explanation inputs:
+
+- Shared interests
+- Matching activity filters
+- Availability overlap
+- Public profile fields
+- Confirmed hangout details
+- Non-sensitive preference summaries
+
+Disallowed explanation inputs:
+
+- Raw onboarding transcripts
+- Private feedback
+- Negative feedback from other users
+- Sensitive inferred traits
+- Exact home location
+- Internal confidence scores
+
+### Location Privacy
+
+Before a hangout is confirmed:
+
+- Use approximate location or neighborhood-level data.
+- Do not show exact participant addresses.
+- Use location only for travel feasibility and venue selection.
+
+After confirmation:
+
+- Show the selected public venue.
+- Still do not reveal participant home addresses.
+- Store only what is needed for travel planning.
+
+### Safety Filters
+
+Safety filters should run before candidate scoring.
+
+Examples:
+
+- Blocked users
+- Hidden users
+- Rejected users
+- Age/policy constraints
+- Reports or trust/safety flags
+- Repeated negative feedback
+- One-sided interest to meet again
+
+### Feedback Privacy
+
+Feedback should update internal models but should not be directly shown to the other participant.
+
+Example:
+
+- Internal: user marked `would_meet_again = false`.
+- User-facing: do not suggest this pair again.
+- Not allowed: "Maya does not want to meet you again."
+
+### Data Deletion and Correction
+
+Users should be able to:
+
+- Delete their account.
+- Delete or archive preference memories.
+- Correct incorrect assumptions.
+- Disconnect calendar/location providers.
+- Remove friends/connections.
+- Block users.
+
+### LLM Privacy Rules
+
+LLM prompts should include only the data needed for the task.
+
+Do not pass:
+
+- Full profile history when only a few memories are needed.
+- Exact addresses unless required for venue planning.
+- Private feedback unrelated to the current decision.
+- Sensitive user notes or unsupported inferences.
+
+### Auditability
+
+Sensitive updates should be traceable.
+
+Store:
+
+- Source of preference memories
+- Memory patch operations
+- Feedback source
+- Connection state changes
+- LLM validation failures
+
+## 13. Database Schema and Indexes
+
+Convene should use a relational schema for stable entities and relationships, with `jsonb` for flexible attributes and `pgvector` for semantic retrieval.
+
+The recommended database is Postgres, preferably through Supabase for the MVP.
+
+### Schema Principles
+
+- Use relational columns for identity, ownership, status, timestamps, and foreign keys.
+- Use `jsonb` for flexible attributes, provider payloads, LLM metadata, and domain-specific preference details.
+- Use `pgvector` for `profile_embedding` and `memory_embedding`.
+- Keep provider-backed venue data cached temporarily, not as permanent owned venue data.
+- Add indexes around actual query patterns: ownership, status, time ranges, vector retrieval, and connection pairs.
+
+### Tables
+
+#### `users`
+
+Stores app-specific user profile data. Auth identity should come from Supabase Auth.
+
+Important columns:
+
+- `id uuid primary key`
+- `display_name text`
+- `age int`
+- `timezone text`
+- `location jsonb`
+- `max_travel_distance jsonb`
+- `created_at timestamptz`
+- `updated_at timestamptz`
+
+Notes:
+
+- `id` should reference `auth.users.id` when using Supabase Auth.
+- `location` should avoid storing exact home address unless truly required.
+
+Indexes:
+
+- Primary key on `id`.
+- Optional location index later if doing geographic queries in Postgres.
+
+#### `preference_profiles`
+
+Stores derived profile summary and retrieval fields.
+
+Important columns:
+
+- `user_id uuid primary key references users(id)`
+- `summary text`
+- `interest_index text[]`
+- `profile_embedding vector`
+- `last_updated timestamptz`
+
+Indexes:
+
+- Primary key on `user_id`.
+- GIN index on `interest_index`.
+- Vector index on `profile_embedding`.
+
+#### `preference_memories`
+
+Stores nuanced preference claims.
+
+Important columns:
+
+- `id uuid primary key`
+- `user_id uuid references users(id)`
+- `topic text`
+- `summary text`
+- `evidence jsonb`
+- `attributes jsonb`
+- `memory_embedding vector`
+- `confidence numeric`
+- `source text`
+- `status text`
+- `created_at timestamptz`
+- `updated_at timestamptz`
+
+Recommended `status` values:
+
+- `active`
+- `archived`
+- `merged`
+
+Indexes:
+
+- `(user_id, status)`
+- `(user_id, topic)`
+- Vector index on `memory_embedding`
+- Optional GIN index on `attributes`
+
+#### `availability_blocks`
+
+Stores user-provided availability.
+
+Important columns:
+
+- `id uuid primary key`
+- `user_id uuid references users(id)`
+- `start_time timestamptz`
+- `end_time timestamptz`
+- `recurrence jsonb`
+- `default_connection_goal text`
+- `location_constraint jsonb`
+- `online_allowed boolean`
+- `in_person_allowed boolean`
+- `created_at timestamptz`
+- `updated_at timestamptz`
+
+Indexes:
+
+- `(user_id, start_time, end_time)`
+- `(user_id, online_allowed, in_person_allowed)`
+
+#### `connections`
+
+Stores relationship state between users.
+
+Important columns:
+
+- `id uuid primary key`
+- `user_a_id uuid references users(id)`
+- `user_b_id uuid references users(id)`
+- `status text`
+- `source text`
+- `created_at timestamptz`
+- `last_interaction_at timestamptz`
+- `hangout_count int`
+- `relationship_strength numeric`
+- `mutual_interest_to_meet_again boolean`
+- `preferred_cadence_days int`
+- `metadata jsonb`
+
+Indexes:
+
+- Unique normalized pair index on `(least(user_a_id, user_b_id), greatest(user_a_id, user_b_id))`.
+- `(user_a_id, status)`
+- `(user_b_id, status)`
+- `(last_interaction_at)`
+
+Implementation note:
+
+- Postgres expression indexes can enforce normalized pair uniqueness.
+- Application code should also normalize or check pairs before inserting.
+
+#### `activities`
+
+Stores known activity types, not specific venues.
+
+Important columns:
+
+- `id uuid primary key`
+- `name text`
+- `type text`
+- `online_or_in_person text`
+- `tags text[]`
+- `required_platforms text[]`
+- `estimated_duration_minutes int`
+- `cost_level text`
+- `social_intensity text`
+- `metadata jsonb`
+- `created_at timestamptz`
+- `updated_at timestamptz`
+
+Indexes:
+
+- `(online_or_in_person)`
+- `(type)`
+- GIN index on `tags`
+
+#### `activity_preferences`
+
+Stores normalized include/exclude activity preferences for a matching request or profile-derived default.
+
+Important columns:
+
+- `id uuid primary key`
+- `user_id uuid references users(id)`
+- `matching_request_id uuid references matching_requests(id)`
+- `label text`
+- `polarity text`
+- `source text`
+- `activity_type text`
+- `tags text[]`
+- `attributes jsonb`
+- `strength numeric`
+- `raw_text text`
+- `created_at timestamptz`
+
+Notes:
+
+- `matching_request_id` can be nullable for reusable profile-derived defaults.
+- `matching_requests.activity_filter` can store a denormalized snapshot of selected preferences for easier replay/debugging.
+
+Indexes:
+
+- `(user_id, source)`
+- `(matching_request_id)`
+- `(activity_type, polarity)`
+- GIN index on `tags`
+
+#### `matching_requests`
+
+Stores one planning attempt input.
+
+Important columns:
+
+- `id uuid primary key`
+- `user_id uuid references users(id)`
+- `connection_goal text`
+- `activity_filter jsonb`
+- `availability_block_id uuid references availability_blocks(id)`
+- `group_size jsonb`
+- `status text`
+- `created_at timestamptz`
+
+Indexes:
+
+- `(user_id, created_at)`
+- `(status, created_at)`
+
+#### `hangouts`
+
+Stores generated or scheduled plans.
+
+Important columns:
+
+- `id uuid primary key`
+- `activity_id uuid references activities(id)`
+- `start_time timestamptz`
+- `end_time timestamptz`
+- `mode text`
+- `location jsonb`
+- `online_platform jsonb`
+- `status text`
+- `created_by text`
+- `match_reason text`
+- `created_at timestamptz`
+- `updated_at timestamptz`
+
+Indexes:
+
+- `(start_time, end_time)`
+- `(status, start_time)`
+
+#### `hangout_participants`
+
+Join table between hangouts and users.
+
+Important columns:
+
+- `hangout_id uuid references hangouts(id)`
+- `user_id uuid references users(id)`
+- `status text`
+- `created_at timestamptz`
+
+Indexes:
+
+- Primary key on `(hangout_id, user_id)`.
+- `(user_id, status)`
+- `(user_id, created_at)`
+
+#### `feedback`
+
+Stores post-hangout feedback.
+
+Important columns:
+
+- `id uuid primary key`
+- `hangout_id uuid references hangouts(id)`
+- `user_id uuid references users(id)`
+- `rating int`
+- `would_meet_again boolean`
+- `activity_fit text`
+- `person_fit text`
+- `comments text`
+- `created_at timestamptz`
+
+Indexes:
+
+- `(hangout_id)`
+- `(user_id, created_at)`
+
+#### `memory_patches`
+
+Stores proposed and applied memory update patches for auditability.
+
+Important columns:
+
+- `id uuid primary key`
+- `user_id uuid references users(id)`
+- `source text`
+- `input_summary text`
+- `operations jsonb`
+- `validation_status text`
+- `applied_at timestamptz`
+- `created_at timestamptz`
+
+Indexes:
+
+- `(user_id, created_at)`
+- `(validation_status, created_at)`
+
+#### `venue_cache`
+
+Stores short-lived normalized venue data from external providers.
+
+Important columns:
+
+- `provider text`
+- `provider_place_id text`
+- `fetched_at timestamptz`
+- `expires_at timestamptz`
+- `normalized_venue jsonb`
+
+Indexes:
+
+- Primary key on `(provider, provider_place_id)`.
+- `(expires_at)`
+
+Rules:
+
+- Do not treat `venue_cache` as canonical.
+- Refresh provider data before final scheduling.
+- Delete or ignore expired records.
+
+#### `provider_tokens`
+
+Stores encrypted external provider tokens for integrations such as Google Calendar.
+
+Important columns:
+
+- `id uuid primary key`
+- `user_id uuid references users(id)`
+- `provider text`
+- `access_token_encrypted text`
+- `refresh_token_encrypted text`
+- `scopes text[]`
+- `expires_at timestamptz`
+- `created_at timestamptz`
+- `updated_at timestamptz`
+
+Indexes:
+
+- `(user_id, provider)`
+- `(expires_at)`
+
+Rules:
+
+- Tokens must never be returned to the frontend.
+- Tokens should be encrypted or stored using a secure provider-managed mechanism.
+- Calendar access is separate from login, even if both use Google.
+
+### Vector Indexes
+
+Use `pgvector` indexes for embeddings.
+
+Recommended:
+
+```sql
+create index preference_profiles_embedding_idx
+on preference_profiles
+using ivfflat (profile_embedding vector_cosine_ops);
+
+create index preference_memories_embedding_idx
+on preference_memories
+using ivfflat (memory_embedding vector_cosine_ops);
+```
+
+Exact index type and dimensions depend on the embedding model.
+
+### JSONB Indexes
+
+Use JSONB indexes sparingly.
+
+Good candidates:
+
+- `preference_memories.attributes` after query patterns are known.
+- `matching_requests.activity_filter` if filtering requests by activity fields.
+- `activities.metadata` if metadata becomes query-heavy.
+
+Avoid indexing every JSONB field before the product has real query patterns.
+
+### Transaction Boundaries
+
+Use transactions for:
+
+- Applying memory patches.
+- Creating hangouts and participants.
+- Applying post-hangout feedback plus social graph updates.
+- Archiving/deleting user-owned data.
+
+The LLM should never write directly to these tables. It should produce structured outputs that backend code validates and writes inside transactions.
+
+## 14. API Routes and Server Function Boundaries
+
+The frontend should not call the database, LLM provider, embeddings provider, Maps/Places provider, or Calendar provider directly. Those calls should go through server-side routes or server actions.
+
+This protects API keys, centralizes validation, and keeps deterministic constraints on the backend.
+
+### Boundary Principles
+
+- Frontend handles UI, forms, loading states, and user interaction.
+- Server routes/actions validate requests and enforce permissions.
+- Server routes/actions call Supabase, LLM APIs, embeddings APIs, Maps APIs, and Calendar APIs.
+- Database writes happen only after backend validation.
+- LLM outputs are treated as proposals, not trusted writes.
+
+### Suggested Route Groups
+
+The exact implementation can use Next.js API routes, server actions, or route handlers. The important part is the boundary.
+
+#### Profile Routes
+
+Purpose:
+
+- Create/update user profile.
+- Run onboarding through the Profile Agent.
+- Create preference memories.
+- Return editable profile summaries.
+
+Suggested endpoints:
+
+```text
+POST /api/profile/onboarding
+GET  /api/profile/me
+PATCH /api/profile/me
+GET  /api/profile/memories
+PATCH /api/profile/memories/:memoryId
+```
+
+Server responsibilities:
+
+- Validate authenticated user.
+- Call Profile Agent if onboarding text needs interpretation.
+- Validate memory patches.
+- Write profile and memory updates transactionally.
+- Regenerate embeddings when needed.
+
+#### Availability Routes
+
+Purpose:
+
+- Create, update, and list manual availability blocks.
+
+Suggested endpoints:
+
+```text
+GET    /api/availability
+POST   /api/availability
+PATCH  /api/availability/:availabilityBlockId
+DELETE /api/availability/:availabilityBlockId
+```
+
+Server responsibilities:
+
+- Validate block ownership.
+- Validate time ranges and recurrence.
+- Prevent invalid blocks such as `end_time <= start_time`.
+- Store availability in canonical timestamp format.
+
+#### Matching Routes
+
+Purpose:
+
+- Create matching requests.
+- Run matching pipeline.
+- Return candidate match results and explanations.
+
+Suggested endpoints:
+
+```text
+POST /api/matching/request
+POST /api/matching/:matchingRequestId/run
+GET  /api/matching/:matchingRequestId
+```
+
+Server responsibilities:
+
+- Normalize activity filters.
+- Generate initial candidate pool.
+- Apply hard filters and availability overlap filtering.
+- Retrieve relevant preference memories.
+- Score candidates.
+- Apply controlled randomness.
+- Generate match explanation.
+
+#### Activity Planning Routes
+
+Purpose:
+
+- Generate activity candidates for a selected match.
+
+Suggested endpoints:
+
+```text
+POST /api/activity-plan
+```
+
+Server responsibilities:
+
+- Validate selected candidate or group came from the matching pipeline.
+- Apply hard activity filters.
+- Call Activity Planning Agent only with valid activity options.
+- Return structured activity candidates.
+
+#### Location Planning Routes
+
+Purpose:
+
+- Generate venue candidates for an in-person activity.
+
+Suggested endpoints:
+
+```text
+POST /api/location-plan
+```
+
+Server responsibilities:
+
+- Build venue search spec.
+- Query venue provider or seeded demo/test catalog.
+- Enrich venues with hours and travel times.
+- Apply hard location filters.
+- Score venues deterministically.
+- Call LLM venue reranker only with valid top candidates.
+- Return selected venue and backups.
+
+#### Scheduling Routes
+
+Purpose:
+
+- Finalize time and create hangout.
+
+Suggested endpoints:
+
+```text
+POST /api/schedule/finalize
+GET  /api/hangouts
+GET  /api/hangouts/:hangoutId
+PATCH /api/hangouts/:hangoutId
+```
+
+Server responsibilities:
+
+- Revalidate availability before creating the hangout.
+- Revalidate selected venue open status when applicable.
+- Create hangout and participants in a transaction.
+- Prevent double booking.
+- Optionally write to external calendar later.
+
+#### Feedback Routes
+
+Purpose:
+
+- Collect post-hangout feedback.
+- Trigger learning loop updates.
+
+Suggested endpoints:
+
+```text
+POST /api/hangouts/:hangoutId/feedback
+```
+
+Server responsibilities:
+
+- Validate participant ownership.
+- Store feedback.
+- Retrieve relevant memories and connection state.
+- Call Feedback Agent for proposed updates.
+- Validate memory patches and social graph changes.
+- Apply updates transactionally.
+
+#### Provider Integration Routes
+
+Purpose:
+
+- Connect external providers such as Calendar or Maps.
+
+Suggested endpoints:
+
+```text
+GET  /api/integrations/calendar/connect
+GET  /api/integrations/calendar/callback
+POST /api/integrations/calendar/disconnect
+```
+
+Server responsibilities:
+
+- Manage OAuth redirects.
+- Store provider tokens securely.
+- Refresh tokens when needed.
+- Keep provider API keys off the frontend.
+
+### Server-Only Operations
+
+These must never run directly in the browser:
+
+- LLM calls
+- Embedding generation
+- Places/Maps API calls using secret keys
+- Calendar OAuth token exchange
+- Database writes
+- Memory patch validation
+- Venue/provider cache writes
+- Safety filtering
+
+### Request Validation
+
+Every route should validate:
+
+- User authentication.
+- Row ownership.
+- Required fields.
+- Enum values.
+- Time ranges.
+- Referenced IDs.
+- Payload size limits.
+- LLM output schema when applicable.
+
+### Response Shape
+
+Prefer structured responses with explicit status and machine-readable errors.
+
+Example:
+
+```json
+{
+  "status": "failed",
+  "code": "no_viable_overlap",
+  "message": "No candidate had enough overlapping availability for this request.",
+  "details": {
+    "minimum_duration_minutes": 90
+  }
+}
+```
+
+### Error Handling
+
+General rules:
+
+- Return validation errors before calling external APIs.
+- Retry transient provider failures only when safe.
+- Fall back to deterministic results when LLM output is invalid.
+- Log provider failures without exposing secrets or private user data.
+- Use structured error codes for UI decisions.
+
+### Frontend Responsibilities
+
+The frontend should:
+
+- Collect onboarding answers.
+- Show profile and memory summaries.
+- Let users create availability blocks.
+- Let users choose connection goal and activity filters.
+- Display generated match/activity/location/hangout results.
+- Collect feedback.
+
+The frontend should not:
+
+- Store API keys.
+- Call LLM providers directly.
+- Call Maps/Places providers directly with secret keys.
+- Bypass backend validation.
+
+## 15. Supabase Auth and Access Control
+
+Supabase Auth should provide user identity, sessions, and authentication for the MVP. Application data should live in Supabase Postgres and reference the authenticated user ID.
+
+### Auth Responsibilities
+
+Supabase Auth handles:
+
+- User signup
+- Login
+- Logout
+- Session refresh
+- Password reset or magic links
+- OAuth login providers if enabled
+- Stable authenticated user IDs
+
+Convene should not store or manage user passwords directly.
+
+### User Identity Model
+
+Supabase Auth stores identity in `auth.users`.
+
+Convene app data should use the auth user ID as the primary user ID:
+
+```text
+auth.users.id
+ -> users.id
+ -> preference_profiles.user_id
+ -> preference_memories.user_id
+ -> availability_blocks.user_id
+ -> matching_requests.user_id
+ -> feedback.user_id
+```
+
+The `users` table stores app-specific profile information, not login credentials.
+
+### Row Level Security
+
+Enable Row Level Security for user-owned tables.
+
+User-owned tables include:
+
+- `users`
+- `preference_profiles`
+- `preference_memories`
+- `availability_blocks`
+- `matching_requests`
+- `feedback`
+
+Basic RLS rule:
+
+```sql
+auth.uid() = user_id
+```
+
+For the `users` table:
+
+```sql
+auth.uid() = id
+```
+
+For join tables and shared objects such as `hangouts`, access should be based on participation:
+
+```text
+User can read a hangout if they appear in hangout_participants.
+```
+
+### Service Role Usage
+
+Some backend operations need broader access than the current user can directly read.
+
+Examples:
+
+- Matching against candidate users.
+- Availability overlap filtering.
+- Social graph updates.
+- Hangout creation for multiple participants.
+- Feedback-driven relationship updates.
+
+These should run only on the server using a Supabase service role key or trusted server client.
+
+Rules:
+
+- Never expose the service role key to the frontend.
+- Server code must still enforce product-level privacy and safety checks.
+- Do not return private candidate data to the requesting user.
+
+### Public vs. Private User Data
+
+Separate what can be shown to other users from what is private.
+
+Public or shareable fields may include:
+
+- Display name
+- Public profile summary
+- General interests chosen for display
+- Confirmed hangout details relevant to participants
+
+Private fields include:
+
+- Preference memories
+- Raw onboarding answers
+- Feedback
+- Internal confidence scores
+- Exact location/home address
+- Safety flags
+- LLM patch history
+
+### OAuth Providers
+
+Supabase Auth can handle login providers such as Google or GitHub.
+
+Calendar access is separate from basic login. If Convene later needs Google Calendar access, it must request calendar-specific OAuth scopes and store provider tokens securely.
+
+Do not assume Google login automatically grants Google Calendar access.
+
+### Provider Tokens
+
+If external provider tokens are stored, they should be encrypted or stored using a secure provider-managed mechanism.
+
+Provider token records should track:
+
+- `user_id`
+- `provider`
+- `access_token_encrypted`
+- `refresh_token_encrypted`
+- `scopes`
+- `expires_at`
+- `created_at`
+- `updated_at`
+
+Server routes should refresh tokens when needed and should never return tokens to the frontend.
+
+### Account Deletion
+
+When a user deletes their account, Convene should:
+
+- Delete or anonymize user-owned profile data.
+- Archive or delete preference memories.
+- Remove availability blocks.
+- Remove provider tokens.
+- Handle connections and hangouts according to product policy.
+- Preserve only required audit records if necessary and legally appropriate.
+
+### MVP Auth Recommendation
+
+For the MVP:
+
+- Use Supabase Auth.
+- Use email/password or magic-link login.
+- Use Supabase Postgres for app data.
+- Enable RLS early on user-owned tables.
+- Use server-side route handlers for multi-user matching and scheduling operations.
