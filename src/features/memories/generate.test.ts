@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Db } from '@/lib/db'
 import { createTestDb, createUser } from '../../../supabase/tests/harness'
-import { fakeAiProvider } from '@/features/openai/fake'
-import type { AiProvider } from '@/features/openai/provider'
+import { fakeAiProvider } from '@/features/ai/fake'
+import type { AiProvider } from '@/features/ai/provider'
 import { generateMemories } from './generate'
 import { listMemories } from './store'
 

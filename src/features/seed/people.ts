@@ -1,6 +1,6 @@
 import type { Interest } from '@/features/profile/interests'
 import type { Answer } from '@/features/profile/schemas'
-import type { MemoryDraft } from '@/features/openai/schemas'
+import type { MemoryDraft } from '@/features/ai/schemas'
 
 /**
  * Twelve fictional people. Every name, phone, answer, and memory is invented; the phone numbers use

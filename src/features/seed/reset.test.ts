@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Db } from '@/lib/db'
-import { fakeAiProvider } from '@/features/openai/fake'
+import { fakeAiProvider } from '@/features/ai/fake'
 import { createTestDb, createUser, count } from '../../../supabase/tests/harness'
 import { personas } from './people'
 import { resetSeededWorld, resetTables } from './reset'
@@ -61,7 +61,7 @@ describe('resetSeededWorld', () => {
     expect(admin.createUser).toHaveBeenCalledWith(
       expect.objectContaining({ password: 'reset-password', email_confirm: true }),
     )
-    expect(await count(db, 'schema_migrations')).toBe(11)
+    expect(await count(db, 'schema_migrations')).toBe(12)
   })
 
   it('fails before deletion if API and database users do not match', async () => {

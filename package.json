@@ -16,6 +16,7 @@
     "migrate": "tsx scripts/migrate.ts",
     "seed": "tsx scripts/seed.ts",
     "db:reset": "tsx scripts/reset.ts",
+    "embeddings:rebuild": "tsx scripts/rebuild-embeddings.ts",
     "worker": "tsx scripts/worker.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

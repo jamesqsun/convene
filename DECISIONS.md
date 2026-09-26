@@ -115,6 +115,13 @@ to reverse later won.
 
 ## Memories
 
+- **Muse Spark for generation, Gemini for embeddings.** Muse Spark 1.3 uses Meta's compatible
+  Responses endpoint through the existing SDK, with response storage disabled. Gemini Embedding 2
+  supplies normalized 1536-dimensional vectors via Google's REST API. Both keys are required
+  together; neither service falls back to another embedding space on errors. Migration 0012
+  invalidates legacy vectors; `embeddings:rebuild` recomputes them without altering memory text.
+  Rebuild with writers stopped after switching models or using reset's deterministic demo vectors.
+
 - **Evidence is filtered, memories with none are dropped.** Rather than rejecting a whole
   extraction because one evidence string is paraphrased, each entry is checked (case and
   whitespace insensitive) and unsupported ones removed.

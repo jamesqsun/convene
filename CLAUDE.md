@@ -52,7 +52,7 @@ are documented at the top of `db.ts`: never read range columns as text, cast cou
 pass jsonb as strings with `::jsonb`.
 
 **Modes and providers.** `src/lib/env.ts` is the only reader of `process.env`. `CONVENE_MODE=demo`
-parses no provider keys at all. `src/lib/providers.ts` selects `ai` (OpenAI or a deterministic
+parses no provider keys at all. `src/lib/providers.ts` selects `ai` (Meta Muse Spark plus Gemini, or a deterministic
 fake), `venues` (Google Places or a labelled fictional provider), and `push` (web-push or a
 recording fake). Each provider has exactly a real and a fake implementation under its feature
 folder; tests inject the fakes.

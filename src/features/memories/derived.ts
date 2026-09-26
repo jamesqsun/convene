@@ -1,4 +1,4 @@
-import type { AiProvider } from '@/features/openai/provider'
+import type { AiProvider } from '@/features/ai/provider'
 import type { Db } from '@/lib/db'
 import {
   listMemoryEmbeddings,

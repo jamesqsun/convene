@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { loadHangouts } from '@/features/events/read'
-import { fakeAiProvider } from '@/features/openai/fake'
+import { fakeAiProvider } from '@/features/ai/fake'
 import { loadHistorySnapshot } from '@/features/planning/batch/history'
 import { pairKey } from '@/features/planning/buckets/reconnection'
 import type { Db } from '@/lib/db'

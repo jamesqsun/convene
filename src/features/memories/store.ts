@@ -1,6 +1,6 @@
 import type { Db } from '@/lib/db'
-import type { MemoryDraft } from '@/features/openai/schemas'
-import { attributesToObject } from '@/features/openai/schemas'
+import type { MemoryDraft } from '@/features/ai/schemas'
+import { attributesToObject } from '@/features/ai/schemas'
 import type { MemoryPatch } from './schemas'
 
 export interface Memory {

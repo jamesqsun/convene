@@ -70,7 +70,7 @@ listed separately. Judgment calls are in [DECISIONS.md](DECISIONS.md).
 ## Hosted verification (needs credentials)
 
 - [ ] Apply migrations to a Supabase project and seed; sign up with email confirmation.
-- [ ] Run a real OpenAI extraction and ranking and a real Google Places search.
+- [ ] Run real Meta Muse Spark extraction/ranking, Gemini embeddings, and a real Google Places search.
 - [ ] Configure a cron for `POST /api/jobs/run` and observe a batch assign plans while every user
       is offline.
 - [ ] Install on a phone over HTTPS and receive assignment and cancellation pushes.

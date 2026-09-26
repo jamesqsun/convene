@@ -3,7 +3,7 @@ import { type AiProvider, type MemoryExtractionInput, embeddingDimensions } from
 import type { MemoryDraft, MemoryExtraction } from './schemas'
 
 /**
- * Deterministic stand-in for OpenAI used in demo mode, tests, and when no key is configured.
+ * Deterministic stand-in for Meta/Gemini used in demo mode, tests, and when no keys are configured.
  * Memories are built from the answer text itself so evidence is always verbatim; embeddings are a
  * hashed bag of words on the unit sphere, so similar answers land near each other.
  */

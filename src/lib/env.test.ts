@@ -12,7 +12,7 @@ const connected = {
 
 describe('readEnv', () => {
   it('defaults to demo mode and ignores provider keys', () => {
-    expect(readEnv({ OPENAI_API_KEY: 'sk-live' })).toEqual({ mode: 'demo' })
+    expect(readEnv({ META_API_KEY: 'sk-live' })).toEqual({ mode: 'demo' })
   })
 
   it('treats blank values as unset', () => {
@@ -31,19 +31,19 @@ describe('readEnv', () => {
     const env = readEnv(connected)
     expect(env.mode).toBe('supabase')
     if (env.mode !== 'supabase') return
-    expect(env.openai).toBeNull()
+    expect(env.meta).toBeNull()
+    expect(env.gemini).toBeNull()
     expect(env.googlePlacesApiKey).toBeNull()
     expect(env.vapid).toBeNull()
     expect(env.seedPassword).toBe('convene-demo')
   })
 
-  it('applies model defaults when an OpenAI key is present', () => {
-    const env = readEnv({ ...connected, OPENAI_API_KEY: 'sk' })
+  it('applies model defaults when both AI keys are present', () => {
+    const env = readEnv({ ...connected, META_API_KEY: 'sk', GEMINI_API_KEY: 'gk' })
     if (env.mode !== 'supabase') throw new Error('expected connected')
-    expect(env.openai).toEqual({
+    expect(env.meta).toEqual({
       apiKey: 'sk',
-      model: 'gpt-6-luna',
-      embeddingModel: 'text-embedding-3-small',
+      model: 'muse-spark-1.3',
     })
   })
 
@@ -57,6 +57,18 @@ describe('readEnv', () => {
     })
     if (env.mode !== 'supabase') throw new Error('expected connected')
     expect(env.vapid?.subject).toBe('mailto:ops@example.com')
+  })
+
+  it('requires both AI keys and never uses old OpenAI keys', () => {
+    expect(() => readEnv({ ...connected, META_API_KEY: 'meta' })).toThrow(/must be set together/)
+    expect(() => readEnv({ ...connected, GEMINI_API_KEY: 'gemini' })).toThrow(
+      /must be set together/,
+    )
+    const old = readEnv({ ...connected, OPENAI_API_KEY: 'old' })
+    expect(old).toMatchObject({ meta: null, gemini: null })
+    expect(readEnv({ ...connected, META_API_KEY: 'meta', GEMINI_API_KEY: 'gemini' })).toMatchObject(
+      { gemini: { apiKey: 'gemini', model: 'gemini-embedding-2' } },
+    )
   })
 
   it('rejects a short cron secret', () => {

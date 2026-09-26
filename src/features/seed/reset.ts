@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Db } from '@/lib/db'
-import { fakeAiProvider } from '@/features/openai/fake'
+import { fakeAiProvider } from '@/features/ai/fake'
 import { personas } from './people'
 import { seedDemoWorld } from './seed'
 

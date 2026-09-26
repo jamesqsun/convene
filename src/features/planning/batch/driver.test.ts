@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fakeAiProvider } from '@/features/openai/fake'
-import type { AiProvider } from '@/features/openai/provider'
+import { fakeAiProvider } from '@/features/ai/fake'
+import type { AiProvider } from '@/features/ai/provider'
 import { fakePushSender } from '@/features/push/fake'
 import type { Db } from '@/lib/db'
 import type { Providers } from '@/lib/providers'

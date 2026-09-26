@@ -4,7 +4,7 @@ import { z } from 'zod'
  * The only module that reads process.env.
  *
  * Demo mode deliberately parses none of the provider secrets, so a demo server can never reach a
- * live database, OpenAI, Google, or a push service by accident even if keys are present.
+ * live database, Meta, Google, or a push service by accident even if keys are present.
  */
 
 const connectedSchema = z.object({
@@ -13,9 +13,12 @@ const connectedSchema = z.object({
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   CRON_SECRET: z.string().min(16, 'CRON_SECRET must be at least 16 characters'),
-  OPENAI_API_KEY: z.string().min(1).optional(),
-  OPENAI_MODEL: z.string().min(1).default('gpt-6-luna'),
-  OPENAI_EMBEDDING_MODEL: z.string().min(1).default('text-embedding-3-small'),
+  META_API_KEY: z.string().min(1).optional(),
+  META_MODEL: z.string().min(1).default('muse-spark-1.3'),
+  GEMINI_API_KEY: z.string().min(1).optional(),
+  GEMINI_EMBEDDING_MODEL: z
+    .enum(['gemini-embedding-2', 'gemini-embedding-001'])
+    .default('gemini-embedding-2'),
   GOOGLE_PLACES_API_KEY: z.string().min(1).optional(),
   VAPID_PUBLIC_KEY: z.string().min(1).optional(),
   VAPID_PRIVATE_KEY: z.string().min(1).optional(),
@@ -26,10 +29,14 @@ const connectedSchema = z.object({
   SEED_PASSWORD: z.string().min(8).default('convene-demo'),
 })
 
-export interface OpenAiConfig {
+export interface MetaConfig {
   apiKey: string
   model: string
-  embeddingModel: string
+}
+
+export interface GeminiConfig {
+  apiKey: string
+  model: 'gemini-embedding-2' | 'gemini-embedding-001'
 }
 
 export interface VapidConfig {
@@ -47,7 +54,8 @@ export interface ConnectedEnv {
   databaseUrl: string
   supabase: { url: string; publishableKey: string; serviceRoleKey: string }
   cronSecret: string
-  openai: OpenAiConfig | null
+  meta: MetaConfig | null
+  gemini: GeminiConfig | null
   googlePlacesApiKey: string | null
   vapid: VapidConfig | null
   seedPassword: string
@@ -85,6 +93,8 @@ function readConnected(source: Record<string, string>): ConnectedEnv {
     )
   }
   const raw = parsed.data
+  if (Boolean(raw.META_API_KEY) !== Boolean(raw.GEMINI_API_KEY))
+    throw new EnvError('META_API_KEY and GEMINI_API_KEY must be set together')
   return {
     mode: 'supabase',
     databaseUrl: raw.DATABASE_URL,
@@ -94,12 +104,9 @@ function readConnected(source: Record<string, string>): ConnectedEnv {
       serviceRoleKey: raw.SUPABASE_SERVICE_ROLE_KEY,
     },
     cronSecret: raw.CRON_SECRET,
-    openai: raw.OPENAI_API_KEY
-      ? {
-          apiKey: raw.OPENAI_API_KEY,
-          model: raw.OPENAI_MODEL,
-          embeddingModel: raw.OPENAI_EMBEDDING_MODEL,
-        }
+    meta: raw.META_API_KEY ? { apiKey: raw.META_API_KEY, model: raw.META_MODEL } : null,
+    gemini: raw.GEMINI_API_KEY
+      ? { apiKey: raw.GEMINI_API_KEY, model: raw.GEMINI_EMBEDDING_MODEL }
       : null,
     googlePlacesApiKey: raw.GOOGLE_PLACES_API_KEY ?? null,
     vapid: readVapid(raw),

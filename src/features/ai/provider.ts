@@ -17,7 +17,7 @@ export interface MemoryExtractionInput {
  * it against the catalog and window itself.
  */
 export interface AiProvider {
-  readonly kind: 'openai' | 'fake'
+  readonly kind: 'meta' | 'fake'
   extractMemories(input: MemoryExtractionInput): Promise<MemoryExtraction>
   embed(texts: readonly string[]): Promise<number[][]>
   rankActivities(input: RankingInput): Promise<unknown>

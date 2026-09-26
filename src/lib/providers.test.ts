@@ -13,7 +13,9 @@ const connected = {
 
 describe('providersFor', () => {
   it('uses fakes in demo mode even when keys are present', () => {
-    const providers = providersFor(readEnv({ OPENAI_API_KEY: 'sk', GOOGLE_PLACES_API_KEY: 'g' }))
+    const providers = providersFor(
+      readEnv({ META_API_KEY: 'sk', GEMINI_API_KEY: 'gk', GOOGLE_PLACES_API_KEY: 'g' }),
+    )
     expect([providers.ai.kind, providers.venues.kind, providers.push.kind]).toEqual([
       'fake',
       'fictional',
@@ -27,7 +29,8 @@ describe('providersFor', () => {
     const full = providersFor(
       readEnv({
         ...connected,
-        OPENAI_API_KEY: 'sk',
+        META_API_KEY: 'sk',
+        GEMINI_API_KEY: 'gk',
         GOOGLE_PLACES_API_KEY: 'g',
         VAPID_PUBLIC_KEY: 'pub',
         VAPID_PRIVATE_KEY: 'priv',
@@ -35,7 +38,7 @@ describe('providersFor', () => {
       }),
     )
     expect([full.ai.kind, full.venues.kind, full.push.kind]).toEqual([
-      'openai',
+      'meta',
       'google_places',
       'web_push',
     ])

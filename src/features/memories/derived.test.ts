@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import type { Db } from '@/lib/db'
 import { createTestDb, createUser } from '../../../supabase/tests/harness'
-import { fakeAiProvider, hashedEmbedding } from '@/features/openai/fake'
+import { fakeAiProvider, hashedEmbedding } from '@/features/ai/fake'
 import { cosine } from '@/features/planning/groups/similarity'
 import { meanUnitVector, refreshDerived } from './derived'
 import { listMemoryEmbeddings, replaceMemories, updateMemory, listMemories } from './store'

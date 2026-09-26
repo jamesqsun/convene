@@ -3,7 +3,7 @@ import type { Db } from '@/lib/db'
 import { noParams } from '@/lib/http'
 import { createTestDb, createUser } from '../../../supabase/tests/harness'
 import type { SessionProvider } from '@/features/auth/session'
-import { fakeAiProvider } from '@/features/openai/fake'
+import { fakeAiProvider } from '@/features/ai/fake'
 import { memoryRoutes } from './api'
 
 let db: Db

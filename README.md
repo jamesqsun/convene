@@ -9,7 +9,8 @@ person, "Would you want to meet this person again?"; a mutual yes creates a frie
 friendships that are overdue for a reunion get priority in later batches.
 
 Built with Next.js 16 (App Router), React 19, TypeScript, Tailwind, Postgres (Supabase in production,
-in-process PGlite for demo and tests), pgvector, OpenAI structured outputs, Google Places, and web push.
+in-process PGlite for demo and tests), pgvector, Meta Muse Spark structured outputs, Gemini embeddings,
+Google Places, and web push.
 
 The product and algorithm are specified in [overview.md](overview.md),
 [technical-requirements.md](technical-requirements.md), and [technical-design.md](technical-design.md).
@@ -90,13 +91,14 @@ CONVENE_SMOKE_URL=http://localhost:3005 pnpm smoke
 Events complete automatically at their end time (derived, no worker needed). Withdrawal is only
 possible before the start; attendance is assumed afterwards.
 
-## Connect Supabase, OpenAI, Google Places, and push
+## Connect Supabase, Meta Muse Spark, Gemini, Google Places, and push
 
 1. Create a Supabase project. Enable the email/password provider and set the Site URL.
 2. Copy `.env.example` to `.env.local`, set `CONVENE_MODE=supabase`, and fill in `DATABASE_URL`
    (the transaction pooler URL on Vercel), the Supabase URL and keys, and `CRON_SECRET`.
-   `OPENAI_API_KEY`, `GOOGLE_PLACES_API_KEY`, and the VAPID keys are optional: without them the app
-   uses interest-only planning, the fictional venue provider, and a logging push sender.
+   Set `META_API_KEY` and `GEMINI_API_KEY` together for AI, or leave both blank for the demo AI fallback.
+   `GOOGLE_PLACES_API_KEY` and the VAPID keys are optional: without them the app
+   uses the fictional venue provider and a logging push sender.
    Generate VAPID keys with `node -e "console.log(require('web-push').generateVAPIDKeys())"`.
 3. Apply the schema and seed the fictional pool (personas become real accounts with `SEED_PASSWORD`):
 
@@ -138,7 +140,7 @@ and their seeded feedback/friendships. Accounts use `SEED_PASSWORD`. Without `--
 before connecting. Use a dedicated development Supabase project.
 
 Dates are relative to the reset time; generated row IDs and timestamps are fresh. Reset always uses
-the deterministic demo embeddings, even if an OpenAI key is configured, and makes no AI, Places,
+the deterministic demo embeddings, even if AI keys are configured, and makes no AI, Places,
 or push calls. Project settings, Storage, unrelated tables, and existing schema are preserved;
 this is a data reset, not a repair of manually changed schema. Users owning Storage objects must
 have those objects removed or reassigned before Auth deletion can succeed.
@@ -146,6 +148,39 @@ have those objects removed or reassigned before Auth deletion can succeed.
 Auth API changes cannot be rolled back together with SQL. If interrupted, fix the reported error
 and rerun the command; it clears partial seed state on retry. Keep writers stopped until it succeeds,
 then restart the app/scheduler and sign in again.
+
+### AI providers and migrating existing embeddings
+
+Get `META_API_KEY` from [Meta Model API](https://dev.meta.ai/) and `GEMINI_API_KEY` from
+[Google AI Studio](https://aistudio.google.com/api-keys). The Gemini key is separate from the
+Google Places integration. Defaults are `META_MODEL=muse-spark-1.3` (Standard tier) and
+`GEMINI_EMBEDDING_MODEL=gemini-embedding-2`. The latter also supports `gemini-embedding-001`.
+Both embedding models return 1536-dimensional vectors, validated and normalized before storage.
+Muse Spark generates preference memories and ranks activities; Gemini embeds memory text for matching.
+
+The `openai` npm package remains only as a compatible client for Meta's Responses API at
+`https://api.meta.ai/v1`; no calls go to OpenAI and `OPENAI_*` variables are no longer read.
+AI source code lives under `src/features/ai`. Meta responses use `store: false`.
+
+When upgrading an existing database, stop the app and scheduler and run:
+
+```sh
+pnpm migrate
+pnpm embeddings:rebuild
+```
+
+Migration 0012 clears old vectors without deleting memories, users, plans, or history. Until rebuilt,
+matching falls back to interests. The rebuild uses Gemini and makes billable API calls; it does not
+regenerate memory text. It clears all vectors first, so a failed run cannot leave old and new model
+vectors mixed. Fix the error and rerun to complete an interrupted rebuild.
+
+Also rebuild after changing embedding models, enabling real AI after using the fallback, or running
+`db:reset` (which intentionally creates demo vectors). Keep the app and worker stopped during these
+changes, then restart them after the rebuild. Both API keys must be configured for connected AI;
+configuring only one fails at startup instead of silently mixing real and fake providers.
+
+API references: [Meta structured output](https://dev.meta.ai/docs/structured-output),
+[Gemini embeddings](https://ai.google.dev/gemini-api/docs/embeddings).
 
 ## Checks
 
@@ -187,5 +222,5 @@ scripts/                   migrate, seed, worker, smoke, icon generation
   48-hour guarantee covers assignment, not notification delivery.
 - Explanations use public interests only. Private memories, raw answers, and feedback answers are
   visible only to their owner.
-- Hosted verification (Supabase auth emails, a real OpenAI key, a real Places key, push on a phone
+- Hosted verification (Supabase auth emails, real Meta and Gemini keys, a real Places key, push on a phone
   over HTTPS) requires your credentials and is tracked in IMPLEMENTATION.md.

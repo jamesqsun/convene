@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 /**
- * Two schemas per model call: a loose "model" schema handed to OpenAI structured outputs (strict
+ * Two schemas per model call: a loose "model" schema handed to Meta structured outputs (strict
  * JSON schema mode rejects length and range keywords) and a strict application schema the parsed
  * result must pass before anything is stored. Model output is a proposal, never trusted as-is.
  */

@@ -5,7 +5,7 @@ import {
   authedMutation,
   sessionProvider,
 } from '@/features/auth/session'
-import type { AiProvider } from '@/features/openai/provider'
+import type { AiProvider } from '@/features/ai/provider'
 import { type Db, getDb } from '@/lib/db'
 import { HttpError, type RouteHandler, jsonResponse, readJson } from '@/lib/http'
 import { getProviders } from '@/lib/providers'

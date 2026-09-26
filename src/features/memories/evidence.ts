@@ -1,4 +1,4 @@
-import type { MemoryDraft } from '@/features/openai/schemas'
+import type { MemoryDraft } from '@/features/ai/schemas'
 
 /**
  * Evidence must be verbatim. A generated memory keeps only evidence entries that appear in the

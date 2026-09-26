@@ -1,6 +1,7 @@
-import { fakeAiProvider } from '@/features/openai/fake'
-import type { AiProvider } from '@/features/openai/provider'
-import { openAiProvider } from '@/features/openai/real'
+import { fakeAiProvider } from '@/features/ai/fake'
+import type { AiProvider } from '@/features/ai/provider'
+import { metaAiProvider } from '@/features/ai/real'
+import { geminiEmbedder } from '@/features/ai/gemini'
 import { fictionalVenueProvider } from '@/features/planning/venues/fictional'
 import { googlePlacesProvider } from '@/features/planning/venues/google-places'
 import type { VenueProvider } from '@/features/planning/venues/provider'
@@ -24,7 +25,10 @@ export function providersFor(env: Env): Providers {
     return { ai: fakeAiProvider(), venues: fictionalVenueProvider(), push: fakePushSender(true) }
   }
   return {
-    ai: env.openai ? openAiProvider(env.openai) : fakeAiProvider(),
+    ai:
+      env.meta && env.gemini
+        ? metaAiProvider(env.meta, geminiEmbedder(env.gemini))
+        : fakeAiProvider(),
     venues: env.googlePlacesApiKey
       ? googlePlacesProvider(env.googlePlacesApiKey)
       : fictionalVenueProvider(),

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { attributeKeyPattern } from '@/features/openai/schemas'
+import { attributeKeyPattern } from '@/features/ai/schemas'
 
 export const maxAttributes = 20
 

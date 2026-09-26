@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import type { Db } from '@/lib/db'
 import { createTestDb, createUser } from '../../../supabase/tests/harness'
-import { hashedEmbedding } from '@/features/openai/fake'
+import { hashedEmbedding } from '@/features/ai/fake'
 import {
   deleteMemory,
   listMemories,

@@ -1,11 +1,11 @@
-import type { AiProvider } from '@/features/openai/provider'
+import type { AiProvider } from '@/features/ai/provider'
 import { onboardingPrompts } from '@/features/profile/schemas'
 import { loadProfile } from '@/features/profile/store'
 import type { Db } from '@/lib/db'
 import { refreshDerived } from './derived'
 import { keepSupported } from './evidence'
 import { type Memory, listMemories, memoryText, replaceMemories } from './store'
-import { attributesToObject } from '@/features/openai/schemas'
+import { attributesToObject } from '@/features/ai/schemas'
 
 export interface GenerateResult {
   status: 'ok' | 'failed'
