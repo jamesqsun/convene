@@ -8,7 +8,7 @@ The September 26 target in technical-design.md and technical-requirements.md sup
 
 - [ ] Remove scheduling activity selections/exclusions, budget, group-size, platform/tool, meeting-mode, travel-radius, and connection-category controls from UI and input contracts; retain onboarding interests and answers.
 - [ ] Replace multi-app contact setup with private phone-only participant coordination; remove online planning, blocking, and separate friendship invitation workflows from the revised demo scope; retain mutual per-person feedback.
-- [ ] Define a migration for existing data and disable immediate pair matching when the batch pipeline is enabled.
+- [ ] Disable immediate pair matching when the batch pipeline is enabled. Legacy-data migration policy is outside the MVP specification scope.
 - [ ] Add normalized city/time-zone partitioning, daily local-date batches, late-arrival handling, and durable retry recovery.
 - [ ] Enforce at least 48 elapsed hours' advance assignment (not guaranteed notification receipt) at final booking, including retries and DST boundaries.
 - [ ] Generate buckets at submitted/clipped start boundaries with a 60-minute minimum; preserve full common windows.
@@ -23,7 +23,9 @@ The September 26 target in technical-design.md and technical-requirements.md sup
 - [ ] Partition buckets using normalized profile similarity plus reconnection priority into groups of 2–10 without singletons; recalculate member rankings and final group windows.
 - [ ] Add structured activity ranking, activity-derived durations within shared availability, Maps venue search, and bounded fallback behavior.
 - [ ] Extend atomic pair booking to all group members with stale-snapshot checks, unique planning IDs, and conflict protection.
-- [ ] Persist deduplicated notification jobs with assignment; implement mobile push separately from phone contact sharing.
+- [ ] Implement required phone browser/PWA push: permission flow, private device subscriptions, service-worker handler, backend sender, and deduplicated post-commit assignment/cancellation jobs with bounded retries. Push targets device subscriptions, not phone numbers.
+- [ ] Automatically complete non-cancelled events at their end timestamp, assume attendance once started, and reject withdrawals at or after start; unlock feedback at completion without requiring an open browser.
+- [ ] Keep shared explanations limited to public interests or generic reasons; prevent disclosure of others' private memories, answers, and feedback, including paraphrases.
 - [ ] Enforce latest-shared-event mutual yes for reconnection bonuses; missing/no both disable them, no finalizes that event response, and older late feedback cannot override newer results.
 - [ ] Support individual withdrawals, preserve events with at least two remaining, and atomically cancel singleton events; revoke withdrawn-user contacts/feedback and meeting credit.
 - [ ] Allow later memory generation to recreate deleted memories; do not implement permanent suppression for the MVP.
@@ -111,7 +113,7 @@ The automatic slot flow is implemented locally. Hosted Supabase and scheduler ve
 - [ ] Granular memory merge/archive operations and semantic memory retrieval
 - [ ] Adaptive LLM follow-up conversation (current onboarding uses two written prompts)
 - [ ] Advanced relationship cadence optimization (mutual per-person feedback and capped reconnection priority are part of the revised MVP above)
-- [ ] Push/email notifications, reporting/moderation tools, and account deletion UI
+- [ ] Email notifications, reporting/moderation tools, and account deletion UI (phone PWA push is required for the revised MVP above)
 - [ ] Production query/load tuning, UI history pagination, queue retention/monitoring, and distributed rate limiting
 - [ ] International matching and translation
 

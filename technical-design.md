@@ -22,6 +22,8 @@ Authenticate ownership for both actions. An edit persists the selected title/top
 
 ### Per-person feedback and the friend graph
 
+Non-cancelled events automatically become completed at their end timestamp. Attendance is assumed for participants remaining when the event starts. Allow withdrawals only before the start, enforcing the cutoff server-side; no attendance confirmation or no-show workflow is required. Completion must not depend on a browser being open. Feedback eligibility and recency use the event end timestamp, even if a worker persists the completion status later.
+
 After a completed, non-cancelled group hangout, ask each participant **Would you want to meet this person again?** separately for every other participant. Keep activity/general feedback separate. Store directional answers keyed uniquely by (hangout_id, author_user_id, subject_user_id); both users must have remained participants through event completion and the author cannot rate themselves.
 
 For the MVP, an absent answer evaluates as **no** for friendship creation. Both people must explicitly answer yes about each other for the same completed hangout before creating a friendship. Late feedback can complete the pair later. Persist one friendship per normalized unordered user pair, created when the second yes is recorded, with the qualifying event as provenance. Make simultaneous feedback writes/retries idempotent. Remove manual Add friend controls; demo friendships should be backed by seeded completed hangouts and mutual yes feedback.
@@ -90,6 +92,8 @@ Group in-person availability by normalized city and local event date. For the ha
 City matching is an approximation, not proof of travel feasibility. Locations can help pick a sensible venue within the city, without introducing new user controls. Exact participant locations remain private.
 
 ## 4. Candidate overlap buckets
+
+Sections 4–5 define the authoritative bucket algorithm for the MVP. High-level references to a “minimum number of overlap intervals” mean this greedy selection process, not a global minimum-bucket optimization.
 
 Use a minimum shared duration of exactly 60 minutes for eligibility. This is not an hourly start-time grid and does not restrict the full bucket window to one hour.
 
@@ -191,7 +195,7 @@ Input: a provisional group, its full shared window, and relevant preference memo
 
 Convene chooses the activity; users do not select or exclude activities, set budgets, choose tools, or set group-size preferences. For the MVP, use a small application-owned catalog of in-person activities with duration metadata. The 60-minute minimum applies to bucket eligibility, not a fixed event length. Choose an activity duration that fits the final group's full shared window; do not truncate an activity to one hour merely because the bucket minimum is one hour.
 
-Have the LLM rank a few catalog activity IDs using the group's interests and memories. Return structured data containing activity IDs, duration, and a short explanation. Validate IDs and duration server-side; keep a deterministic catalog fallback. Do not pass phone numbers, exact home locations, or unrelated private memories to the model. User-facing explanations must not expose another person's raw answers or private feedback.
+Have the LLM rank a few catalog activity IDs using the group's interests and memories. Return structured data containing activity IDs, duration, and a short explanation. Validate IDs and duration server-side; keep a deterministic catalog fallback. Do not pass phone numbers, exact home locations, or unrelated private memories to the model. Shared plan explanations use public interests or generic compatibility reasons. They must not expose another person's private memories, raw answers, or feedback, including through paraphrases. Private memory details may appear only in owner-only views.
 
 Keep alternate activities for location-search failure. No budget, platform, online-mode, or user-selected activity filters are applied in this narrowed pipeline.
 
@@ -231,7 +235,7 @@ Existing range and owner indexes remain useful. Add indexes for city/date eligib
 
 Collect a normalized international phone number and share it only with participants in an assigned event. There is no communication-platform picker. Keep phone numbers out of public profiles, embeddings, and LLM prompts. Cancelled events stop returning participant contacts. A withdrawn participant loses contact access immediately and is no longer returned as an event contact to others, even if the event continues. Historical membership retained for audit does not grant contact, feedback, or completed-meeting credit. Phone ownership verification is outside the demo scope.
 
-Notification delivery runs after commit and must be deduplicated by event/recipient/type. Phone coordination does not imply automated SMS. Mobile PWA push requires permission, stored per-device push subscriptions, and a backend sender; that feature remains unimplemented. In-app status remains available independently of push permission. Do not describe an event as delivered to a device merely because it was committed.
+Phone browser/PWA push notifications are required for the MVP. Implement a permission flow, authenticated per-device push subscription storage, a service-worker push handler, and a backend sender. Send assignment and cancellation notifications to permission-enabled devices after commit, with jobs deduplicated by event/recipient/type and delivery attempts tracked per subscription. Push targets the subscribed device, not the saved phone number; phone coordination does not imply automated SMS. Handle failed sends with bounded retries and retire invalid subscriptions. In-app status remains available when permission is denied or push is unavailable. Neither event commit nor provider acceptance proves device receipt; the 48-hour rule guarantees assignment, not notification delivery.
 
 ## 11. Server and data boundaries
 
@@ -239,9 +243,13 @@ Retain Next.js, React, TypeScript, Tailwind, Supabase Auth/Postgres, pgvector, a
 
 All mutations go through authenticated and validated server routes. Use owner/participant access controls and RLS. Service-role credentials and provider keys remain server-only. LLM output is a validated proposal, never a direct database write. Extend private feedback storage with per-person answers and mutual friendship derivation. Include the personal connection graph and owner memory Edit/Delete operations; advanced automatic memory patching, social-graph optimization, and friendship invitation/acceptance UI remain deferred.
 
-No schema migration or runtime change is made by this document. Legacy data and restrictions require an explicit migration plan before switching the running application to the narrowed contract; this document does not authorize silently clearing stored user data.
+No schema migration or runtime change is made by this document. A legacy-data migration policy is outside the MVP specification scope.
 
 ## 12. Acceptance checks
+
+- Non-cancelled events complete automatically at their end time without an open browser. Attendance is assumed after start; withdrawals at or after start are rejected. Feedback stays locked until the end and cancelled events never earn meeting credit.
+- Shared explanations reveal no other participant's private memories, answers, or feedback, including paraphrases.
+- Permission-enabled phone devices receive a push attempt after assignment/cancellation commits. Verify permission denial, subscription ownership, invalid subscriptions, bounded retries, and per-device delivery tracking; in-app status remains available without push.
 
 - Account creation/onboarding captures basic data including age, location, and phone plus short written answers; generated memories retain evidence validation.
 - Profile shows generated memories with only Edit/Delete correction actions. Ownership checks reject cross-user mutations; edited/deleted memories and affected derived embeddings cannot leave stale preferences in new planning.

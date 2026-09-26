@@ -23,7 +23,7 @@ Remove activity selections/exclusions, budgets, preferred group sizes, tool/plat
 5. Split each bucket into groups of 2–10 using profile similarity and reconnection priority so overdue friends are more likely to share the final event. Group size is chosen by the application.
 6. Use relevant preference memories to rank in-person activities whose duration fits the group's shared window.
 7. Find a venue in the city with Maps/Places and select an exact time inside shared availability.
-8. Save the group event atomically and notify participants after assignment. PWA push requires separate implementation.
+8. Save the group event atomically and send a push notification to each participant's permission-enabled phone browser/PWA after assignment. Push is required for the MVP and uses device subscriptions, not phone numbers; receipt is not guaranteed.
 
 For example, availability beginning at 11:10 is valid; there is no requirement to start on the hour. One hour is the minimum bucket overlap, not a fixed event duration or a start-time grid. The selected activity determines the event duration.
 
@@ -31,9 +31,15 @@ The MVP assigns at most one hangout per person per planning date and one per ava
 
 Count-based selection with a reconnection bonus is a deliberate simplification: it favors larger pools and overdue friendships but may match fewer people than another arrangement. It does not optimize the smallest bucket globally. Without friendship bonuses it reduces to largest-first.
 
+The bucket algorithm in technical-design.md sections 4–5 is the source of truth. “Minimum number of overlap intervals” is not an optimization requirement.
+
 The initial reconnection bonus is zero for the first 14 days since a friend's last completed shared hangout, then grows linearly to +1 per unique friend pair at 60 days. The total bucket bonus is capped at half the participant count. Friendship and bonus eligibility begin only after both people explicitly answer yes about meeting each other again for the same completed hangout. Missing and explicit no both give zero reconnection bonus for the latest completed shared event; an explicit no finalizes that event's response. Scheduled and cancelled plans do not count as meetings. Reconnection also influences final grouping, but is a preference rather than a guarantee; all availability and group-size rules still hold.
 
 ## User experience
+
+Non-cancelled events automatically complete when their end time passes. Attendance is assumed once an event starts; participants can withdraw only before the start. No attendance confirmation or no-show workflow is required for the MVP.
+
+Shared plan explanations use public interests or generic compatibility reasons. Another participant's private memories, raw answers, and feedback must not be revealed, including through paraphrases; private memory details are visible only to their owner.
 
 Show when a slot is waiting for its batch, when a plan is assigned, and when no plan was found. Users can edit or pause unassigned slots. Late additions are considered only if a complete event can still meet the 48-hour advance-assignment rule. Existing plans stay stable.
 

@@ -27,9 +27,12 @@ This document specifies the revised hackathon MVP target. It replaces the earlie
 - Query slots intersecting the target day. Clip usable segments to local-day bounds and the advance-assignment cutoff; cross-midnight slots must not be booked twice.
 - Allow catch-up/retry processing only while the 48-hour advance assignment and the selected activity duration remain feasible within a qualifying shared window. Do not reshuffle committed plans for late arrivals.
 - Show waiting, assigned, and unfilled states. Keep pending, filled, paused, expired, and cancelled lifecycle states.
+- Non-cancelled events automatically complete at their end timestamp. Assume attendance for participants remaining when the event starts; reject withdrawals at or after the start. Feedback and meeting recency use this automatic completion, with no attendance-confirmation or no-show workflow.
 - Cancellation removes only the withdrawing participant and releases their reservation/date assignment and closes their slot. Preserve the event and others' slots if at least two remain; cancel for the remaining participant if the group drops to one. Serialize/idempotently process concurrent withdrawals, notify after commit, and revoke withdrawn-user contact/feedback access. Do not backfill or rematch automatically; explicit reopening remains subject to assignment rules.
 
 ## 3. Overlap bucket algorithm
+
+The algorithm in technical-design.md sections 4–5 is authoritative. Use the greedy count-plus-reconnection selection below; minimizing the number of overlap buckets globally is not a requirement.
 
 - Minimum common availability is 60 minutes. Do not impose an hourly or half-hourly start grid.
 - Evaluate every distinct submitted or clipped segment start. At start t, include people whose segment contains [t, t + 60 minutes).
@@ -52,6 +55,7 @@ This document specifies the revised hackathon MVP target. It replaces the earlie
 - Reconnection is a soft preference in both bucket selection and final grouping. Do not assume friends sharing a bucket will automatically share an event or force friendship chains into oversized groups. All city, time, advance assignment, deduplication, and group-size rules still apply.
 - Recompute each final group's full shared window from source availability after partitioning.
 - Use relevant memories to let the LLM rank a small catalog of in-person activities with durations that fit the final shared window. Validate structured IDs/duration and retain deterministic alternatives.
+- Shared plan explanations use public interests or generic compatibility reasons. Never expose another participant's private memories, raw answers, or feedback, including paraphrases. Private memory details are owner-only.
 - Users do not choose activities, budgets, tools, or group sizes. These are not hidden required inputs to the new pipeline.
 - Use Maps/Places to find a venue within the city using the group, activity, and available location context.
 - Do not require travel-radius, route fairness, transportation, personal budget, or accessibility-selection workflows for this hackathon pipeline.
@@ -83,7 +87,7 @@ Index pending availability ranges, owner reads, city/date eligibility, ready bat
 - Cancelled plans and withdrawn participants stop returning participant contacts; withdrawn users lose access even when the event continues and receive no feedback/meeting credit. Phone ownership verification is outside scope.
 - Phone coordination does not imply SMS delivery or an SMS provider.
 - Persist notification work atomically with assignment and send only after commit. Deduplicate event/recipient/type delivery jobs.
-- PWA push needs user permission, device subscriptions, a service-worker handler, and a backend sender. It is not implemented yet and is separate from phone-number sharing.
+- Phone browser/PWA push notifications are required for the MVP. Implement user permission, stored per-device subscriptions, a service-worker handler, and a backend sender. Send assignment and cancellation notifications after commit to permission-enabled devices; push uses subscriptions, not the participant's phone number.
 - Keep in-app plan status usable when push is unavailable or permission is denied. The 48-hour guarantee concerns assignment and in-app availability, not notification delivery or receipt.
 
 ## 7. Configuration and verification
@@ -102,4 +106,4 @@ Verify generated-memory title/summary/attribute editing, owner-only Edit/Delete 
 
 Recurring availability and calendar OAuth, online hangouts, messaging-platform integrations, configurable planning preferences, travel-time optimization, advanced social-graph optimization and friendship invitation UI, blocking/moderation product flows, reservations, advanced memory patches, international matching, and production-scale optimization are not required for this revised demo. The bounded reconnection bonus using explicit friendship records is included.
 
-Existing runtime behavior and stored data are not changed by this specification. Plan schema/data migration explicitly before enabling the rework.
+Existing runtime behavior and stored data are not changed by this specification. A legacy-data migration policy is outside the MVP specification scope.
