@@ -1,223 +1,166 @@
 # Convene
 
-> **Planning rework agreed, implementation pending:** [Technical design](technical-design.md), [technical requirements](technical-requirements.md), and [product overview](overview.md) now specify daily city-based batches, assignment at least 48 hours ahead, one-hour minimum overlap buckets, and in-person groups with phone coordination. The target removes activity, budget, group-size, platform/tool, mode, travel-radius, and connection-category controls, plus online and blocking workflows. The instructions below describe the current runnable implementation, which still includes those older features. Track the transition in [IMPLEMENTATION.md](IMPLEMENTATION.md).
-
 **You give Convene time. Convene turns it into plans.**
 
-A mobile-first social planning app: get to know a person, find compatible company, pick a shared activity, schedule a hangout, and learn from private feedback.
+A mobile-first social planning PWA. People complete a short onboarding, save when they are free, and
+a nightly city-local batch assigns them to small in-person hangouts at least 48 hours ahead. Convene
+picks the company, the activity, the venue, and the exact time. Afterwards everyone answers, per
+person, "Would you want to meet this person again?"; a mutual yes creates a friendship, and
+friendships that are overdue for a reunion get priority in later batches.
 
-Built with Next.js App Router, React, TypeScript, Tailwind CSS, **Supabase** (Postgres and Auth), and **OpenAI** (structured preference extraction and embeddings).
+Built with Next.js 16 (App Router), React 19, TypeScript, Tailwind, Postgres (Supabase in production,
+in-process PGlite for demo and tests), pgvector, OpenAI structured outputs, Google Places, and web push.
 
-## Quick start: explore without credentials
+The product and algorithm are specified in [overview.md](overview.md),
+[technical-requirements.md](technical-requirements.md), and [technical-design.md](technical-design.md).
+[IMPLEMENTATION.md](IMPLEMENTATION.md) tracks status and [DECISIONS.md](DECISIONS.md) records every
+judgment call made where the specs left room.
 
-### How automatic planning works
+## Quick start (demo mode, no credentials)
 
-Users save availability; Convene automatically fills it when a compatible person has overlapping availability. A Sunday 3–8 pm slot with coffee selected waits for a compatible nearby person, then receives a coffee event within that shared window. Users do not need to click a planning button or be online together. Default to one event per slot; no match means the slot stays pending until expiration.
-
-Optional preferences default to “Surprise me” / “Any compatible option.” Interests, activities, acceptable meeting modes, languages, platforms, group sizes, and connection categories should allow “select all that apply.” Selected activities are alternatives, not a requirement to do all of them. Random choices always respect both users' constraints.
-
-Saving a slot now starts matching automatically. Activities, meeting options, company preferences, interests, platforms, and exclusions support multiple acceptable choices. Language and group-size controls remain future work. Demo matching runs in memory; persistent matching uses the Supabase job queue and worker described below. See [IMPLEMENTATION.md](IMPLEMENTATION.md).
-
-Requirements: Node.js 22 or newer and pnpm 11.19.0. Install pnpm with `npm install -g pnpm@11.19.0` if needed.
+Requirements: Node.js 20.9 or newer and pnpm 12 (`npm install -g pnpm`).
 
 ```sh
 pnpm install
-cp .env.example .env.local
 pnpm dev
 ```
 
-On PowerShell, use `Copy-Item .env.example .env.local` instead of `cp` if preferred. Open [localhost:3000](http://localhost:3000).
+Open [localhost:3000](http://localhost:3000). Demo mode boots an in-process Postgres, applies the
+real migrations, and seeds twelve fictional people (nine in Toronto, three in Vancouver) with
+memories, availability for the next two planning dates, and two completed past hangouts so
+friendships exist with real provenance. Everything lives in server memory and resets on restart.
+No external service is ever contacted in demo mode, even if keys are present in `.env.local`.
 
-The default `CONVENE_MODE=demo` provides an isolated demo session. It never calls Supabase or OpenAI, even if keys are present. Demo data is held in server memory and expires after a day, a server restart, or eviction. Each browser session gets a separate fictional world; this mode is intended for local exploration, not persistent hosting.
+### Try the whole loop
 
-### Try the complete loop
+1. On the sign-in page, tap a persona chip (start with **Maya**). Or create an account and walk
+   through onboarding: name and age, city, phone, interests, three written answers, then the
+   memory sketch is generated.
+2. **Availability** shows the seeded windows waiting for their batch, with the time the batch runs.
+   Add a window of your own; it is saved in your city's time zone and must end more than 49 hours
+   from now. Tap **Run planning now (demo)** to execute the batch immediately instead of waiting for
+   midnight.
+3. A banner announces the new plan. **Plans** shows the activity, the fictional venue (labelled as
+   such, with unverified hours), the exact time, the other people with their interests, and their
+   phone numbers. **Withdraw** removes only you; the plan survives if two people remain.
+4. **Hangouts** lists completed hangouts. Answer yes or no for each person. Answers are private and
+   final; when both people say yes they become friends, shown as a badge.
+5. **Graph** draws you in the middle and everyone you have met around you. Friends are solid lines;
+   lines fade with time since your last Convene hangout together but never disappear.
+6. **Profile** shows what Convene remembers as editable memories. Edit a title, summary, or
+   individual attribute, or delete a memory; derived embeddings refresh immediately. The answers page
+   lets you change your raw answers and regenerate.
+7. The push banner asks for notification permission. In demo mode a throwaway VAPID key lets the
+   browser subscribe and the server logs what it would have sent.
 
-1. Click **Let's get to know you**, add your name, choose interests, answer the two conversational prompts, and save your preferences.
-   Add your phone number with its country code. Select communication platforms and enter the requested username or number for each one. For demo testing, use fictional details such as `+1 202 555 0123` and `convene_test_user`.
-2. Add a dated availability block. For a reliable seeded demo, choose a time inside **13:00–23:00 UTC** in the next 14 days, with at least 90 minutes free. Times in the UI are shown and entered in your browser's local timezone.
-3. Leave the slot preferences on **Surprise me**, or select any activities, meeting options, and company preferences that work. Save it; no separate planning action is needed. The slot shows **Waiting for a match** or **Plan assigned**.
-4. See the resulting plan in **My plans**, including its time, person, activity, and explanation. Open its details to cancel it.
-5. In demo mode, **Past moments** includes one clearly labeled example hangout so you can try feedback immediately. In connected mode, feedback unlocks after the actual hangout ends.
-6. Visit **Connections** to save a friend or block someone. A block cancels upcoming plans together; a negative “meet again” answer prevents future matching in either direction.
-7. Open **My profile** to inspect private preference memories or edit onboarding answers.
-8. Edit or pause waiting slots in **Availability**. Cancel an assigned plan from its details. Cancellation closes both participating slots; use **Reopen** only when you want another match. Each slot receives one event, even if time remains in its window.
-
-### Contact details and communication
-
-Profiles require a phone number and at least one communication method: **Phone / SMS, Discord, WhatsApp, Instagram, or Telegram**. Selecting an app reveals its required identifier field. WhatsApp uses a phone number with country code (which may differ from the main number); Discord, Instagram, and Telegram use usernames. These fields check format, not account ownership; SMS verification and platform OAuth are not implemented.
-
-Matching selects a common enabled method with valid identifiers, preferring a shared app over Phone / SMS. This applies to in-person plans too, so participants can coordinate. Phones are not an automatic fallback if Phone / SMS was deselected. Browser/game/tool requirements are separate from communication apps.
-
-The chosen contact appears under **How to reach…** in assigned-plan details. Contacts are stored in the owner-only profile JSON, never public person cards, AI preference input, or embeddings. Only participants receive the chosen method's identifier; the other saved identifiers stay private. Cancelled plans and blocked/declined relationships suppress contact display. Removing a selected method also stops its future display; previously copied details cannot be recalled. Completed, non-cancelled plans retain access while both participants still enable the chosen method. Seeded contacts are explicitly fictional and must not be contacted.
-
-Existing users should edit their profile to add contact details before creating new matches. Old Browser/PC/Switch selections are not treated as communication channels; no username or number is guessed. Existing plans without a saved communication channel can show a currently shared method after both profiles have been completed.
-
-All seeded people and venues are fictional. In connected mode, in-person matching requires a private location saved in **My profile** and enforces both users' straight-line distance limits to one another and the approximate Midtown Atlanta venue area. This does not verify actual venues, opening hours, driving distance, or reservations. Demo mode uses a city-only simulation. Users elsewhere can use online plans, which do not require location. Participants receive the selected contact method in plan details and arrange their own room or call.
-
-## Connect Supabase and OpenAI
-
-### 1. Create your Supabase project
-
-Create a Supabase project, then apply the migrations in filename order: [initial schema](supabase/migrations/202609240001_initial.sql), [automatic slots](supabase/migrations/202609240002_automatic_slots.sql), [overlap protection](supabase/migrations/202609240003_availability_no_overlap.sql), and [communication contacts](supabase/migrations/202609240004_communication_contacts.sql). Use the SQL editor or your normal Supabase CLI migration workflow. Existing installations should apply only migrations they have not already run.
-
-The fourth migration records each plan's communication channel and verifies both participants have enabled it and supplied identifiers before booking. Phone numbers and usernames use the existing private profile storage; no separate contact service or credential is needed. Re-run the seed script if you want the existing fictional pool to receive demo contact details (it also refreshes its availability as described below).
-
-The second migration adds slot lifecycle/preferences, a partial GiST overlap index, a spatial point index, and a private durable job queue. Existing real users' slots start **paused**, because the previous build did not authorize automatic assignment; reopen them in Availability to opt in. New slots start pending.
-
-The third migration prevents one user's pending, paused, or filled slots from overlapping, including concurrent inserts, edits, and reopening. Adjacent endpoints are allowed (3–5 pm and 5–8 pm); different users can offer the same time. Cancelled and expired slots do not block new slots. The app displays a conflict message without saving the attempted change.
-
-If overlapping slots already exist, the migration stops without changing them. Find the conflicting pairs with this read-only SQL, edit/remove unassigned slots in Availability, or deliberately cancel an assigned plan if that is the conflict you want to remove. Then rerun the migration. If the SQL editor reports an aborted transaction, run `ROLLBACK;` first.
-
-```sql
-select a.user_id, a.id as first_slot, b.id as second_slot,
-       a.start_time, a.end_time, b.start_time as other_start, b.end_time as other_end
-from public.availability_blocks a
-join public.availability_blocks b
-  on a.user_id = b.user_id and a.id < b.id and a.during && b.during
-where a.status in ('pending', 'paused', 'filled')
-  and b.status in ('pending', 'paused', 'filled');
-```
-
-The migration creates user profiles, private preference memories, availability, directional connections, hangouts, participants, reservation ranges, and feedback. It enables RLS, restricts direct client access, and creates server-only transaction functions for profile updates, scheduling, and feedback.
-
-### 2. Configure environment variables
-
-Edit `.env.local`:
-
-```dotenv
-CONVENE_MODE=supabase
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
-SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
-OPENAI_API_KEY=YOUR_OPENAI_API_KEY
-OPENAI_MODEL=gpt-6-luna
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-CRON_SECRET=YOUR_LONG_RANDOM_SERVER_ONLY_SECRET
-CONVENE_WORKER_URL=http://localhost:3000
-```
-
-Get your Supabase URL and keys from the project's Connect dialog / API settings. The publishable key identifies the project; the service-role key and OpenAI key are server-only secrets. Never prefix those secret names with `NEXT_PUBLIC_` or commit `.env.local`.
-
-The embedding column is fixed at **1536 dimensions**. The integration explicitly requests that dimension; changing to an incompatible model requires a schema migration and regenerating stored embeddings. The LLM must support Responses API structured outputs. You can override the model IDs through the environment.
-
-Preference extraction defaults to GPT-6 Luna with low reasoning effort. Other model overrides use their default reasoning settings. Embeddings use `text-embedding-3-small` independently.
-
-When OpenAI is unavailable or returns invalid output, the app saves the user's explicit answers and shows a notice. Interest-based matching continues. It does not silently switch to another LLM provider.
-
-### 3. Configure authentication
-
-In Supabase Authentication:
-
-- Enable the email/password provider.
-- Set the Site URL to `http://localhost:3000` for local development, and to your HTTPS origin when deployed.
-- Configure email delivery as needed. With email confirmation enabled, users sign up, click the confirmation email, then return to Convene and sign in.
-
-Convene handles login, signup, logout, and session refresh through server route handlers with the Supabase SSR cookie client. Routes verify identity using `auth.getUser()`. No authenticated rendering takes place in Server Components, so a session-refresh proxy is not required for the current UI.
-
-### 4. Seed the demo pool
+Run the automated end-to-end smoke test against a running demo server (it refuses to touch a
+connected server):
 
 ```sh
-pnpm seed
-```
-
-This creates ten fictional candidate profiles and the next 14 days of availability. If an OpenAI key is configured, it also generates their profile embeddings (a paid API call). Re-run to refresh expired seed availability. It updates only the ten fixed seed IDs and their availability, leaving real profiles alone. Existing seed hangouts remain reserved.
-
-The seeds are database profiles, **not login accounts**. They cannot confirm attendance. They exist to demonstrate matching. Real signed-up users with saved profiles and availability can also be matched.
-
-### 5. Run
-
-```sh
-pnpm dev
-```
-
-Restart the server after changing environment variables. With `CONVENE_MODE=supabase`, a missing configuration fails with a setup error; it never falls back to anonymous demo storage. Create an account, save a profile, and add availability to begin.
-
-### 6. Keep automatic matching running
-
-For connected local development, run this in a second terminal while the web server is running:
-
-```sh
-pnpm worker
-```
-
-Use a long random `CRON_SECRET` (for example, generate one with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`). Keep it server-only. The worker reads `.env.local` and calls `/api/jobs/match` every minute with `Authorization: Bearer <CRON_SECRET>`. `pnpm worker --once` runs one batch. Use HTTPS for remote `CONVENE_WORKER_URL` values.
-
-In production, configure a scheduler to call that endpoint with the same authorization header every minute, or supervise the worker process. The migration does not provision a hosted scheduler. GET and POST are supported; unauthenticated calls are rejected. Keep the web server reachable even when users close their browsers. Size the worker cadence/concurrency to queue volume; each request processes up to ten jobs within a roughly twenty-second work budget.
-
-Saving a slot enqueues its job in the same database transaction. A server-side `after` callback makes a best-effort immediate pass; the independent worker is required for recovery and later matching. Unmatched jobs retry every five minutes; errors back off, failed leases recover, and repeated failures wait thirty minutes before another cycle. Candidate pages contain at most 100 overlapping slots with continuation. No LLM call is needed for each matching attempt.
-
-The UI refreshes while visible and announces newly assigned plans in-app. Assignment continues without the browser in connected mode, but push/email notifications are not implemented. Demo mode needs no worker and has no durable offline guarantee.
-
-## Checks and production build
-
-```sh
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm start
-```
-
-To run the HTTP smoke tests, start a server in demo mode, then run:
-
-```sh
-node scripts/smoke.mjs
-```
-
-The smoke test creates isolated fictional sessions and exercises the API. It refuses to mutate a connected-mode server. `CONVENE_TEST_URL` can override the default `http://localhost:3000`.
-
-The domain tests cover availability intersection, conflict subtraction, cancellation, budget/platform/exclusion filters, connection consent, timezone offsets, scoring feedback, and invalid inputs. The database tests run the actual migration in local PGlite Postgres with pgvector and btree_gist, simulate Supabase roles, and verify RLS, transaction rollback, booking constraints, cancellation, feedback, and blocking. No cloud credentials are needed for these tests.
-
-Use `pnpm format` to format implementation files, or `pnpm format:check` to check formatting. PWA icons are committed; regenerate them after editing `public/icon.svg` with `node scripts/generate-icons.mjs`.
-
-## Project structure
-
-```text
-src/app/                   Next.js pages, API routes, manifest, and styles
-src/components/            Responsive application and forms
-src/lib/domain.ts          Shared types and Zod input contracts
-src/lib/catalog.ts         Fictional people, activities, and venues
-src/lib/planner.ts         Deterministic filtering, scheduling, and scoring
-src/lib/server/            Auth, Supabase persistence, OpenAI, request handling
-supabase/migrations/       Schema, RLS, and atomic transaction functions
-scripts/seed.ts            Repeatable fictional candidate seeding
-scripts/smoke.mjs          End-to-end API smoke checks
-tests/                    Domain behavior tests
-public/                   PWA icons, service worker, offline fallback
-IMPLEMENTATION.md          Implementation status and remaining milestones
+pnpm smoke                      # HTTP API flow, against http://localhost:3000
+pnpm e2e                        # real browser flow in the locally installed Chrome
+CONVENE_SMOKE_URL=http://localhost:3005 pnpm smoke
 ```
 
 ## How planning works
 
-The worker queries pending overlapping time ranges using `&&` and a partial GiST index, checks basic eligibility, and loads only that candidate page's participants. It applies mutual slot preferences, relationship goals, geographic limits, and booking conflicts before scoring. Explicit slot activities are alternatives and override profile interest defaults, but never exclusions, budget, or required platforms. Normal UI reads are scoped to the user's slots, connections, and plans.
+1. Saving availability only authorizes a future batch; nothing is planned immediately.
+2. At each city's local midnight the batch targets the local date two days ahead (Monday plans
+   Wednesday). Catch-up passes run hourly for that date to pick up late availability, for as long
+   as a one-hour window could still start 48 hours out.
+3. Slots are clipped to the local day and to the 48-hour cutoff. At every distinct start, people
+   whose window contains the next 60 minutes form a candidate bucket; buckets keep their full common
+   window.
+4. Buckets are chosen greedily by people count plus a capped reconnection bonus, removing chosen
+   people and recomputing until nothing with two people remains. The bonus per overdue friend pair
+   ramps from zero at 14 days to one at 60 days since their last completed hangout, requires mutual
+   yes feedback on that latest hangout, and is capped at half the bucket size.
+5. Each bucket is split into groups of two to five (target four, no singletons) by profile
+   embedding similarity plus the same reconnection bonus.
+6. The model ranks the activity catalog from public interests and each member's own memory
+   summaries; ids and durations are validated and a deterministic fallback always exists. A venue is
+   found within the city and an exact start is chosen on a 15-minute grid, respecting opening hours
+   when known.
+7. One transaction revalidates every slot revision, the local date, the 48-hour rule, and the group
+   size, then writes the event, participants, reservations, and per-date assignments, fills the
+   slots, and queues push jobs. A stable planning id makes retries idempotent.
+8. Push jobs are sent after commit with per-device tracking, retirement of dead subscriptions, and
+   bounded backoff. In-app status never depends on push.
 
-Valid options are scored using shared interests, optional OpenAI embedding similarity, and a small feedback adjustment. Weighted selection among top candidates and random activity tie-breaking add variety. Scheduling rechecks slot revisions, profile snapshots, availability, and relationship eligibility in a transaction; participant locks and a Postgres exclusion constraint prevent conflicting reservations. The same transaction fills both slots and links their event. Cancellation releases reservations and closes the slots without automatic rebooking.
+Events complete automatically at their end time (derived, no worker needed). Withdrawal is only
+possible before the start; attendance is assumed afterwards.
 
-OpenAI extracts bounded, structured preference memories with verbatim evidence. Unsupported evidence is rejected. Public summaries are generated deterministically from selected interests, so private conversational answers cannot leak through an AI summary. Feedback comments are preserved as contextual memories; ratings gently influence activity selection, and reconnection preferences control future pair eligibility. Advanced semantic memory retrieval and LLM-generated feedback patches are not yet implemented.
+## Connect Supabase, OpenAI, Google Places, and push
 
-All mutations pass through authenticated, validated server routes. The browser receives its own private memories and feedback, and only public fields for people in its plans/connections. The service role is used only on the server for cross-user planning. Mutating requests reject cross-origin browser calls, oversized payloads, and invalid schemas. The local rate limiter is per process; use a distributed limiter before a public launch.
+1. Create a Supabase project. Enable the email/password provider and set the Site URL.
+2. Copy `.env.example` to `.env.local`, set `CONVENE_MODE=supabase`, and fill in `DATABASE_URL`
+   (the transaction pooler URL on Vercel), the Supabase URL and keys, and `CRON_SECRET`.
+   `OPENAI_API_KEY`, `GOOGLE_PLACES_API_KEY`, and the VAPID keys are optional: without them the app
+   uses interest-only planning, the fictional venue provider, and a logging push sender.
+   Generate VAPID keys with `node -e "console.log(require('web-push').generateVAPIDKeys())"`.
+3. Apply the schema and seed the fictional pool (personas become real accounts with `SEED_PASSWORD`):
 
-## PWA and deployment
+   ```sh
+   pnpm migrate
+   pnpm seed
+   ```
 
-The production build includes a web manifest, 192px/512px icons, and an offline fallback. The service worker is registered in production only. It caches **only the offline page and icon**, never profile data, auth responses, or plans. Installation requires HTTPS or localhost and a supporting browser.
+4. Run the app and, in a second terminal, the scheduler:
 
-For Vercel, import the repository, select Next.js, use `pnpm install` and `pnpm build`, and configure the same environment variables with `CONVENE_MODE=supabase`. Apply the database migration and seed separately. Set Supabase's Site URL to the deployed origin. Do not use process-local demo storage as a persistent hosted database.
+   ```sh
+   pnpm dev
+   pnpm worker            # posts to /api/jobs/run every 60 seconds; --once for a single tick
+   ```
 
-## Current boundaries
+   In production, point any cron at `/api/jobs/run` (GET or POST) with
+   `Authorization: Bearer <CRON_SECRET>` at least every ten minutes. Each call expires dead slots,
+   runs every due city batch (main and catch-up), and drains push jobs. `vercel.json` schedules
+   Vercel Cron every ten minutes and Vercel adds the bearer header automatically when `CRON_SECRET`
+   is set; note that Hobby projects only allow daily crons, so use a Pro project or an external
+   cron service for hourly catch-up passes. The route declares a 300-second budget.
 
-- This is the first runnable MVP, not the entire long-term roadmap. See [IMPLEMENTATION.md](IMPLEMENTATION.md).
-- Availability is dated, not recurring. All stored instants are UTC; inputs and display use the browser timezone.
-- Connected proximity checks use private coordinates, a spatial bounding-box shortlist, and great-circle distance. Routing and verified venue coordinates are still future work; the seeded venue area is approximate.
-- There are no external calendar writes, live venue searches, group plans, notifications, or reservations yet.
-- “Saved friend” is a private directional list, not proof of mutual friendship. Mutual invitation/acceptance workflows are still planned.
-- Feedback supports private comments, activity scoring, and connection suppression. Rich preference patching, memory deletion UI, account deletion UI, and full moderation/reporting are later milestones.
-- Candidate searches are paginated by slot ID. Large participant histories, job retention/monitoring, and production-scale performance tuning still need attention before public launch.
-- Live Supabase and OpenAI verification requires your project credentials. Local demo tests do not validate external service configuration.
+Row level security is enabled on every table with no policies for the browser roles, so PostgREST
+exposes nothing; all access goes through the authenticated server routes.
 
-## Design references
+## Checks
 
-- [Product overview](overview.md)
-- [Technical design](technical-design.md)
-- [Technical requirements](technical-requirements.md)
-- [OpenAI structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs)
-- [OpenAI embeddings](https://developers.openai.com/api/docs/guides/embeddings)
-- [Supabase server-side auth](https://supabase.com/docs/guides/auth/server-side/creating-a-client?framework=nextjs)
+```sh
+pnpm typecheck
+pnpm test          # 346 tests: pure planning logic, real migrations in PGlite, routes, components
+pnpm build
+pnpm format
+```
+
+Database tests run the actual migrations in an in-process Postgres with pgvector and btree_gist and
+exercise the commit, withdrawal, and feedback transactions directly. No credentials are needed.
+
+## Project structure
+
+```text
+src/app/                   Next.js pages and one-line route re-exports
+src/lib/                   env, database drivers (pg and PGlite), migrations, http helpers, time zones
+src/features/auth/         Supabase and demo sessions, sign-in and sign-up
+src/features/profile/      onboarding, interests vocabulary, profile store
+src/features/memories/     generation with evidence validation, edit/delete, derived embeddings
+src/features/availability/ slot lifecycle and derived states
+src/features/planning/     the pure pipeline: segments, buckets, selection, grouping, activities, venues, batch driver
+src/features/events/       plan reads and withdrawal
+src/features/feedback/     per-person feedback and friendships
+src/features/graph/        the personal connection graph
+src/features/push/         subscriptions, sender, service-worker client
+src/features/seed/         the fictional world
+supabase/migrations/       schema, deny-all RLS, the three transaction functions, and their tests
+scripts/                   migrate, seed, worker, smoke, icon generation
+```
+
+## Boundaries
+
+- Availability is dated, not recurring. City membership is an approximation of reachability.
+- Venue facts come from the provider as-is; missing hours are labelled unverified and nothing is
+  reserved. Demo venues are fictional and say so.
+- Phone ownership is not verified. Push targets device subscriptions, not phone numbers, and the
+  48-hour guarantee covers assignment, not notification delivery.
+- Explanations use public interests only. Private memories, raw answers, and feedback answers are
+  visible only to their owner.
+- Hosted verification (Supabase auth emails, a real OpenAI key, a real Places key, push on a phone
+  over HTTPS) requires your credentials and is tracked in IMPLEMENTATION.md.
