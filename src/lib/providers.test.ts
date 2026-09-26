@@ -23,7 +23,12 @@ describe('providersFor', () => {
 
   it('falls back per provider in connected mode', () => {
     const bare = providersFor(readEnv(connected))
-    expect([bare.ai.kind, bare.venues.kind, bare.push.kind]).toEqual(['fake', 'fictional', 'fake'])
+    expect([bare.ai.kind, bare.venues.kind, bare.push.kind, bare.calendar]).toEqual([
+      'fake',
+      'fictional',
+      'fake',
+      null,
+    ])
     const full = providersFor(
       readEnv({
         ...connected,

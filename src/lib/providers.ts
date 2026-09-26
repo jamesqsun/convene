@@ -1,3 +1,6 @@
+import { fakeCalendarProvider } from '@/features/calendar/fake'
+import { googleCalendarProvider } from '@/features/calendar/google'
+import type { CalendarProvider } from '@/features/calendar/provider'
 import { fakeAiProvider } from '@/features/openai/fake'
 import type { AiProvider } from '@/features/openai/provider'
 import { openAiProvider } from '@/features/openai/real'
@@ -17,11 +20,18 @@ export interface Providers {
   ai: AiProvider
   venues: VenueProvider
   push: PushSender
+  /** Null in connected mode without Google credentials: the calendar features are hidden. */
+  calendar: CalendarProvider | null
 }
 
 export function providersFor(env: Env): Providers {
   if (env.mode === 'demo') {
-    return { ai: fakeAiProvider(), venues: fictionalVenueProvider(), push: fakePushSender(true) }
+    return {
+      ai: fakeAiProvider(),
+      venues: fictionalVenueProvider(),
+      push: fakePushSender(true),
+      calendar: fakeCalendarProvider(),
+    }
   }
   return {
     ai: env.openai ? openAiProvider(env.openai) : fakeAiProvider(),
@@ -29,6 +39,7 @@ export function providersFor(env: Env): Providers {
       ? googlePlacesProvider(env.googlePlacesApiKey)
       : fictionalVenueProvider(),
     push: env.vapid ? webPushSender(env.vapid) : fakePushSender(true),
+    calendar: env.googleCalendar ? googleCalendarProvider(env.googleCalendar) : null,
   }
 }
 

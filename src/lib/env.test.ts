@@ -59,6 +59,26 @@ describe('readEnv', () => {
     expect(env.vapid?.subject).toBe('mailto:ops@example.com')
   })
 
+  it('requires both Google keys and a token secret together', () => {
+    expect(() => readEnv({ ...connected, GOOGLE_CLIENT_ID: 'id' })).toThrow(/together/)
+    expect(() =>
+      readEnv({ ...connected, GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 's' }),
+    ).toThrow(/CALENDAR_TOKEN_SECRET/)
+    const env = readEnv({
+      ...connected,
+      GOOGLE_CLIENT_ID: 'id',
+      GOOGLE_CLIENT_SECRET: 's',
+      CALENDAR_TOKEN_SECRET: 'x'.repeat(32),
+    })
+    if (env.mode !== 'supabase') throw new Error('expected connected')
+    expect(env.googleCalendar).toEqual({
+      clientId: 'id',
+      clientSecret: 's',
+      tokenSecret: 'x'.repeat(32),
+    })
+    expect(readEnv(connected)).toMatchObject({ googleCalendar: null })
+  })
+
   it('rejects a short cron secret', () => {
     expect(() => readEnv({ ...connected, CRON_SECRET: 'short' })).toThrow(/CRON_SECRET/)
   })

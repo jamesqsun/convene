@@ -24,6 +24,12 @@ const connectedSchema = z.object({
     .regex(/^(mailto:|https:)/, 'VAPID_SUBJECT must start with mailto: or https:')
     .optional(),
   SEED_PASSWORD: z.string().min(8).default('convene-demo'),
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+  CALENDAR_TOKEN_SECRET: z
+    .string()
+    .min(32, 'CALENDAR_TOKEN_SECRET must be at least 32 characters')
+    .optional(),
 })
 
 export interface OpenAiConfig {
@@ -38,6 +44,13 @@ export interface VapidConfig {
   subject: string
 }
 
+export interface GoogleCalendarConfig {
+  clientId: string
+  clientSecret: string
+  /** Encrypts stored refresh tokens. */
+  tokenSecret: string
+}
+
 export interface DemoEnv {
   mode: 'demo'
 }
@@ -50,6 +63,7 @@ export interface ConnectedEnv {
   openai: OpenAiConfig | null
   googlePlacesApiKey: string | null
   vapid: VapidConfig | null
+  googleCalendar: GoogleCalendarConfig | null
   seedPassword: string
 }
 
@@ -75,6 +89,17 @@ function readVapid(raw: z.infer<typeof connectedSchema>): VapidConfig | null {
     )
   }
   return { publicKey: values[0]!, privateKey: values[1]!, subject: values[2]! }
+}
+
+function readGoogleCalendar(raw: z.infer<typeof connectedSchema>): GoogleCalendarConfig | null {
+  const values = [raw.GOOGLE_CLIENT_ID, raw.GOOGLE_CLIENT_SECRET]
+  const setCount = values.filter(Boolean).length
+  if (setCount === 0) return null
+  if (setCount !== 2)
+    throw new EnvError('GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together')
+  if (!raw.CALENDAR_TOKEN_SECRET)
+    throw new EnvError('CALENDAR_TOKEN_SECRET is required when Google Calendar is configured')
+  return { clientId: values[0]!, clientSecret: values[1]!, tokenSecret: raw.CALENDAR_TOKEN_SECRET }
 }
 
 function readConnected(source: Record<string, string>): ConnectedEnv {
@@ -103,6 +128,7 @@ function readConnected(source: Record<string, string>): ConnectedEnv {
       : null,
     googlePlacesApiKey: raw.GOOGLE_PLACES_API_KEY ?? null,
     vapid: readVapid(raw),
+    googleCalendar: readGoogleCalendar(raw),
     seedPassword: raw.SEED_PASSWORD,
   }
 }
