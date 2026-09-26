@@ -103,6 +103,19 @@ hr {
   flex-direction: column;
   z-index: 20;
 }
+@media (min-width: 521px) {
+  .sidebar {
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-width: none;
+  }
+  .sidebar::-webkit-scrollbar {
+    display: none;
+  }
+  .sidebar > * {
+    flex-shrink: 0;
+  }
+}
 .brand {
   display: flex;
   align-items: center;

@@ -27,6 +27,8 @@ The automatic slot flow is implemented locally. Hosted Supabase and scheduler ve
 
 ## Existing implementation
 
+- [x] Desktop/tablet sidebar scrolls in short windows with its scrollbar hidden, keeping navigation and account controls reachable
+
 - [x] Reject overlapping availability on creation, editing, and reopening; database exclusion constraint protects concurrent writes, with adjacent windows allowed
 - [x] Preserve existing overlapping data during migration and document explicit conflict cleanup
 
