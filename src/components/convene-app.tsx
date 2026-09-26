@@ -41,6 +41,7 @@ import {
   type Hangout,
   type Mode,
   type Profile,
+  type Availability,
 } from "@/lib/domain";
 
 type Tab =
@@ -209,11 +210,11 @@ export function ConveneApp() {
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
   const [auth, setAuth] = useState(false);
-  const [modal, setModal] = useState<
-    "profile" | "availability" | "plan" | null
-  >(null);
+  const [modal, setModal] = useState<"profile" | "availability" | null>(null);
   const [feedback, setFeedback] = useState<Hangout | null>(null);
   const [selected, setSelected] = useState<Hangout | null>(null);
+  const [editingSlot, setEditingSlot] = useState<Availability | null>(null);
+  const seenPlans = useRef<Set<string> | null>(null);
   const reload = useCallback(async () => {
     try {
       const response = await fetch("/api/state", { cache: "no-store" });
@@ -223,6 +224,17 @@ export function ConveneApp() {
         return;
       }
       if (!response.ok) throw new Error(body.message);
+      const assigned = (body as AppState).hangouts.filter(
+        (h) => h.status === "scheduled",
+      );
+      if (
+        seenPlans.current &&
+        assigned.some((h) => !seenPlans.current!.has(h.id))
+      )
+        setToast(
+          "A time slot has been filled. Your new plan is ready in My plans.",
+        );
+      seenPlans.current = new Set(assigned.map((h) => h.id));
       setState(body);
       setAuth(false);
       setError("");
@@ -235,6 +247,13 @@ export function ConveneApp() {
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production")
       void navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, [reload]);
+  useEffect(() => {
+    if (!state || busy || modal || auth) return;
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") void reload();
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [!!state, busy, modal, auth, reload]);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 6500);
@@ -257,6 +276,11 @@ export function ConveneApp() {
       }
       if (!response.ok) throw new Error(body.message);
       setState(body.state);
+      seenPlans.current = new Set(
+        (body.state as AppState).hangouts
+          .filter((h) => h.status === "scheduled")
+          .map((h) => h.id),
+      );
       setToast(body.notice || success || "Saved.");
       return true;
     } catch (e) {
@@ -281,19 +305,14 @@ export function ConveneApp() {
       setFeedback(null);
       setSelected(null);
       setState(null);
+      seenPlans.current = null;
       setAuth(true);
     } catch {
       setError("Could not sign out. Try again.");
     }
   }
   const startPlanning = () =>
-    setModal(
-      !state?.profile
-        ? "profile"
-        : !state.availability.some((b) => Date.parse(b.end) > Date.now())
-          ? "availability"
-          : "plan",
-    );
+    setModal(state?.profile ? "availability" : "profile");
   if (auth) return <AuthScreen onSuccess={reload} />;
   if (!state)
     return (
@@ -320,13 +339,16 @@ export function ConveneApp() {
   const past = state.hangouts.filter(
     (h) => h.status !== "cancelled" && Date.parse(h.end) <= Date.now(),
   );
-  const blocks = state.availability
-    .filter((b) => Date.parse(b.end) > Date.now())
-    .sort((a, b) => a.start.localeCompare(b.start));
+  const blocks = state.availability.sort((a, b) =>
+    a.start.localeCompare(b.start),
+  );
   const hours = blocks.reduce(
     (sum, b) =>
-      sum +
-      (Date.parse(b.end) - Math.max(Date.now(), Date.parse(b.start))) / 3600000,
+      (b.status && b.status !== "pending") || Date.parse(b.end) <= Date.now()
+        ? sum
+        : sum +
+          (Date.parse(b.end) - Math.max(Date.now(), Date.parse(b.start))) /
+            3600000,
     0,
   );
   const friends = state.connections.filter((c) => c.status === "friend");
@@ -543,7 +565,7 @@ export function ConveneApp() {
                       <button className="primary" onClick={startPlanning}>
                         {!state.profile
                           ? "Let's get to know you"
-                          : "Find my next hangout"}
+                          : "Add a time slot"}
                         <ArrowRight size={17} />
                       </button>
                       <span className="hero-footnote">
@@ -579,7 +601,7 @@ export function ConveneApp() {
                         <h3>A good week starts with one plan.</h3>
                         <p>Add a little free time. We’ll take it from there.</p>
                         <button className="text-button" onClick={startPlanning}>
-                          Make your first plan <ArrowRight size={15} />
+                          Add your first time slot <ArrowRight size={15} />
                         </button>
                       </div>
                     </div>
@@ -699,7 +721,7 @@ export function ConveneApp() {
                 description="The who, what, and when. All in one little place."
                 action={
                   <button className="primary" onClick={startPlanning}>
-                    <Plus size={17} /> Make a plan
+                    <Plus size={17} /> Add availability
                   </button>
                 }
               />
@@ -796,9 +818,84 @@ export function ConveneApp() {
                         </p>
                       </div>
                       <span className="tag">{modeLabel(b.mode)}</span>
+                      <span className="tag">
+                        {b.status === "filled"
+                          ? "Plan assigned"
+                          : Date.parse(b.end) <= Date.now() &&
+                              (!b.status ||
+                                b.status === "pending" ||
+                                b.status === "paused")
+                            ? "Unfilled · expired"
+                            : b.status === "pending" || !b.status
+                              ? "Waiting for a match"
+                              : b.status}
+                      </span>
+                      <span className="muted">
+                        {b.interests?.join(" or ") || "Surprise me"}
+                      </span>
+                      {b.status === "filled" ? (
+                        <button
+                          className="text-button"
+                          onClick={() =>
+                            setSelected(
+                              state.hangouts.find(
+                                (h) => h.id === b.hangoutId,
+                              ) ?? null,
+                            )
+                          }
+                        >
+                          View plan
+                        </button>
+                      ) : (
+                        Date.parse(b.end) > Date.now() && (
+                          <>
+                            {(!b.status ||
+                              b.status === "pending" ||
+                              b.status === "paused") && (
+                              <button
+                                className="text-button"
+                                disabled={busy}
+                                onClick={() => {
+                                  setEditingSlot(b);
+                                  setModal("availability");
+                                }}
+                              >
+                                Edit
+                              </button>
+                            )}
+                            <button
+                              className="text-button"
+                              disabled={busy}
+                              onClick={() =>
+                                void act(
+                                  {
+                                    action: "slot_status",
+                                    id: b.id,
+                                    status:
+                                      !b.status || b.status === "pending"
+                                        ? "paused"
+                                        : "pending",
+                                  },
+                                  b.status === "pending"
+                                    ? "Matching paused."
+                                    : "Slot reopened for automatic matching.",
+                                )
+                              }
+                            >
+                              {!b.status || b.status === "pending"
+                                ? "Pause"
+                                : "Reopen"}
+                            </button>
+                          </>
+                        )
+                      )}
                       <button
                         className="icon-button"
-                        disabled={busy}
+                        disabled={
+                          busy ||
+                          b.status === "filled" ||
+                          b.status === "cancelled"
+                        }
                         aria-label={`Remove availability ${dateLabel(b.start)} ${timeLabel(b.start)}`}
                         onClick={() =>
                           act(
@@ -831,8 +928,9 @@ export function ConveneApp() {
                 </Empty>
               )}
               <p className="muted">
-                Removing free time does not cancel plans already made. You can
-                cancel a plan from its details.
+                Each slot waits for one compatible plan. Cancel assigned plans
+                from their details; reopen a cancelled slot only when you want
+                another match.
               </p>
             </>
           )}
@@ -1068,39 +1166,28 @@ export function ConveneApp() {
         </Modal>
       )}
       {modal === "availability" && (
-        <Modal title="Make a little room." onClose={() => setModal(null)}>
+        <Modal
+          title="Make a little room."
+          onClose={() => {
+            setModal(null);
+            setEditingSlot(null);
+          }}
+        >
           <AvailabilityForm
+            initial={editingSlot}
             busy={busy}
             error={error}
             onSave={async (block) => {
               if (
                 await act(
-                  { action: "availability", block },
-                  "Free time added. You're ready for a plan.",
-                )
-              )
-                setModal(null);
-            }}
-          />
-        </Modal>
-      )}
-      {modal === "plan" && (
-        <Modal
-          title="Let's find your next hangout."
-          onClose={() => setModal(null)}
-        >
-          <PlanForm
-            busy={busy}
-            error={error}
-            onSave={async (input) => {
-              if (
-                await act(
-                  { action: "plan", ...input },
-                  "Your next hangout is on the calendar.",
+                  editingSlot
+                    ? { action: "edit_availability", id: editingSlot.id, block }
+                    : { action: "availability", block },
+                  "Slot saved. Matching starts automatically.",
                 )
               ) {
                 setModal(null);
-                setTab("My plans");
+                setEditingSlot(null);
               }
             }}
           />
@@ -1349,17 +1436,59 @@ function ProfileForm({
       )}
       {step === 2 && (
         <>
-          <label>
-            Where would you like to hang out?
-            <select
-              value={p.mode}
-              onChange={(e) => update("mode", e.target.value as Mode)}
+          <ModeChoices value={p.mode} onChange={(v) => update("mode", v)} />
+          <fieldset>
+            <legend>Nearby in-person plans</legend>
+            <p className="form-hint">
+              Connected in-person matching needs your private location. The
+              current fictional venues are around Midtown Atlanta. Online plans
+              work without location.
+            </p>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                if (!navigator.geolocation) {
+                  window.alert("Location is unavailable in this browser.");
+                  return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                  (position) =>
+                    update("location", {
+                      latitude: position.coords.latitude,
+                      longitude: position.coords.longitude,
+                    }),
+                  () =>
+                    window.alert(
+                      "Location could not be read. You can still use online matching.",
+                    ),
+                  { timeout: 10000, maximumAge: 300000 },
+                );
+              }}
             >
-              <option value="either">Online or in person</option>
-              <option value="in_person">In person</option>
-              <option value="online">Online</option>
-            </select>
-          </label>
+              {p.location ? "Update my location" : "Use my current location"}
+            </button>
+            {p.location && (
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => update("location", null)}
+              >
+                Remove saved location
+              </button>
+            )}
+            <label>
+              Maximum straight-line distance (km)
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={p.radiusKm}
+                onChange={(e) => update("radiusKm", Number(e.target.value))}
+                required
+              />
+            </label>
+          </fieldset>
           <label>
             Maximum budget per hangout (USD)
             <input
@@ -1408,28 +1537,13 @@ function ProfileForm({
               ))}
             </div>
           </fieldset>
-          <label>
-            Anything you'd rather skip?
-            <select
-              aria-label="Excluded activity"
-              value={p.excludedInterests[0] || ""}
-              onChange={(e) =>
-                update(
-                  "excludedInterests",
-                  e.target.value
-                    ? [e.target.value as (typeof interests)[number]]
-                    : [],
-                )
-              }
-            >
-              <option value="">Nothing in particular</option>
-              {interests
-                .filter((i) => !p.interests.includes(i))
-                .map((i) => (
-                  <option key={i}>{i}</option>
-                ))}
-            </select>
-          </label>
+          <Choices
+            label="Activities to skip · select all that apply"
+            options={interests.filter((i) => !p.interests.includes(i))}
+            value={p.excludedInterests}
+            onChange={(v) => update("excludedInterests", v)}
+            emptyLabel="Nothing in particular"
+          />
         </>
       )}
       {error && (
@@ -1470,23 +1584,111 @@ function ProfileForm({
   );
 }
 
+function Choices<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  emptyLabel,
+  labels,
+}: {
+  label: string;
+  options: readonly T[];
+  value: T[];
+  onChange: (v: T[]) => void;
+  emptyLabel: string;
+  labels?: Partial<Record<T, string>>;
+}) {
+  return (
+    <fieldset>
+      <legend>{label}</legend>
+      <div className="interest-options">
+        <button
+          type="button"
+          className={`interest-chip ${!value.length ? "selected" : ""}`}
+          aria-pressed={!value.length}
+          onClick={() => onChange([])}
+        >
+          {emptyLabel}
+        </button>
+        {options.map((option) => (
+          <button
+            type="button"
+            key={option}
+            className={`interest-chip ${value.includes(option) ? "selected" : ""}`}
+            aria-pressed={value.includes(option)}
+            onClick={() =>
+              onChange(
+                value.includes(option)
+                  ? value.filter((v) => v !== option)
+                  : [...value, option],
+              )
+            }
+          >
+            {labels?.[option] ?? option}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+function ModeChoices({
+  value,
+  onChange,
+}: {
+  value: Mode;
+  onChange: (v: Mode) => void;
+}) {
+  return (
+    <Choices<"in_person" | "online">
+      label="Meeting options · select all that apply"
+      options={["in_person", "online"]}
+      value={value === "either" ? [] : [value]}
+      onChange={(v) => onChange(v.length === 1 ? v[0] : "either")}
+      emptyLabel="Surprise me · either works"
+      labels={{ in_person: "In person", online: "Online" }}
+    />
+  );
+}
 function AvailabilityForm({
+  initial,
   busy,
   error,
   onSave,
 }: {
+  initial: Availability | null;
   busy: boolean;
   error: string;
-  onSave: (block: { start: string; end: string; mode: Mode }) => Promise<void>;
+  onSave: (block: {
+    start: string;
+    end: string;
+    mode: Mode;
+    interests: (typeof interests)[number][];
+    goals: ("new" | "friends")[];
+  }) => Promise<void>;
 }) {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const localDate = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const [date, setDate] = useState(localDate(tomorrow));
-  const [start, setStart] = useState("15:00");
-  const [end, setEnd] = useState("18:00");
-  const [mode, setMode] = useState<Mode>("either");
+  const localTime = (value: string) => {
+    const d = new Date(value);
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+  const [date, setDate] = useState(
+    localDate(initial ? new Date(initial.start) : tomorrow),
+  );
+  const [start, setStart] = useState(
+    initial ? localTime(initial.start) : "15:00",
+  );
+  const [end, setEnd] = useState(initial ? localTime(initial.end) : "18:00");
+  const [mode, setMode] = useState<Mode>(initial?.mode ?? "either");
+  const [selectedInterests, setSelectedInterests] = useState<
+    (typeof interests)[number][]
+  >((initial?.interests ?? []) as (typeof interests)[number][]);
+  const [goals, setGoals] = useState<("new" | "friends")[]>(
+    initial?.goals ?? [],
+  );
   return (
     <form
       onSubmit={(e) => {
@@ -1495,12 +1697,14 @@ function AvailabilityForm({
           start: new Date(`${date}T${start}`).toISOString(),
           end: new Date(`${date}T${end}`).toISOString(),
           mode,
+          interests: selectedInterests,
+          goals,
         });
       }}
     >
       <p className="form-intro">
-        Pick a window when you'd enjoy some company. We'll fit the plan inside
-        it.
+        Save a window and we'll automatically assign one plan inside it when a
+        compatible person is available. Until then, it stays waiting.
       </p>
       <label>
         Which day?
@@ -1532,14 +1736,22 @@ function AvailabilityForm({
           />
         </label>
       </div>
-      <label>
-        What works for this time?
-        <select value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
-          <option value="either">Online or in person</option>
-          <option value="in_person">In person</option>
-          <option value="online">Online</option>
-        </select>
-      </label>
+      <ModeChoices value={mode} onChange={setMode} />
+      <Choices
+        label="Activities · select all that apply"
+        options={[...interests]}
+        value={selectedInterests}
+        onChange={setSelectedInterests}
+        emptyLabel="Surprise me"
+      />
+      <Choices
+        label="Company · select all that apply"
+        options={["new", "friends"]}
+        value={goals}
+        onChange={setGoals}
+        emptyLabel="Surprise me"
+        labels={{ new: "Someone new", friends: "A saved friend" }}
+      />
       <p className="form-hint">
         Times are in {Intl.DateTimeFormat().resolvedOptions().timeZone}. Add
         60–90 minutes for the best chance of a match.
@@ -1556,89 +1768,6 @@ function AvailabilityForm({
           <Plus size={17} />
         )}{" "}
         Save my free time
-      </button>
-    </form>
-  );
-}
-function PlanForm({
-  busy,
-  error,
-  onSave,
-}: {
-  busy: boolean;
-  error: string;
-  onSave: (p: {
-    goal: "new" | "friends" | "either";
-    mode: Mode;
-    interest: (typeof interests)[number] | "any";
-  }) => Promise<void>;
-}) {
-  const [goal, setGoal] = useState<"new" | "friends" | "either">("new");
-  const [mode, setMode] = useState<Mode>("either");
-  const [interest, setInterest] = useState<(typeof interests)[number] | "any">(
-    "any",
-  );
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        void onSave({ goal, mode, interest });
-      }}
-    >
-      <p className="form-intro">
-        A few preferences, then leave the details to us. We’ll use your
-        available time to make one complete plan.
-      </p>
-      <label>
-        Who would you like to spend time with?
-        <select
-          value={goal}
-          onChange={(e) => setGoal(e.target.value as typeof goal)}
-        >
-          <option value="new">Someone new</option>
-          <option value="friends">A saved friend</option>
-          <option value="either">I'm open to either</option>
-        </select>
-      </label>
-      <label>
-        Where?
-        <select value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
-          <option value="either">Online or in person</option>
-          <option value="in_person">In person</option>
-          <option value="online">Online</option>
-        </select>
-      </label>
-      <label>
-        In the mood for anything?
-        <select
-          value={interest}
-          onChange={(e) => setInterest(e.target.value as typeof interest)}
-        >
-          <option value="any">Surprise me, based on my interests</option>
-          {interests.map((i) => (
-            <option key={i}>{i}</option>
-          ))}
-        </select>
-      </label>
-      <div className="info-strip">
-        <Sparkles size={18} /> One person, a shared activity, and a time that
-        works.
-      </div>
-      {error && (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      )}
-      <button className="primary full" disabled={busy}>
-        {busy ? (
-          <>
-            <LoaderCircle size={17} className="spin" /> Finding the right fit…
-          </>
-        ) : (
-          <>
-            Make a little magic <Sparkles size={17} />
-          </>
-        )}
       </button>
     </form>
   );

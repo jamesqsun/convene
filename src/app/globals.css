@@ -1016,6 +1016,7 @@ hr {
 }
 .availability-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 20px;
   background: #fcfcf9;
@@ -1024,6 +1025,7 @@ hr {
   padding: 20px;
 }
 .date-tile {
+  flex-shrink: 0;
   width: 53px;
   height: 60px;
   border-radius: 8px;

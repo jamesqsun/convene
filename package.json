@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "seed": "tsx --env-file=.env.local scripts/seed.ts",
+    "worker": "node --env-file=.env.local scripts/match-worker.mjs",
     "format": "prettier --write src scripts tests next.config.ts package.json tsconfig.json README.md IMPLEMENTATION.md",
     "format:check": "prettier --check src scripts tests next.config.ts package.json tsconfig.json README.md IMPLEMENTATION.md"
   },

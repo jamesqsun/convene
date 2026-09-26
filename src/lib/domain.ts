@@ -32,6 +32,13 @@ export const profileSchema = z
     mode: modeSchema,
     budget: z.number().int().min(0).max(100),
     radiusKm: z.number().min(1).max(100),
+    location: z
+      .object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      })
+      .nullable()
+      .optional(),
     novelty: z.number().min(0).max(100),
     platforms: z.array(z.enum(["Discord", "Browser", "PC", "Switch"])).max(4),
     excludedInterests: z.array(z.enum(interests)).max(10),
@@ -55,6 +62,11 @@ export type Availability = {
   start: string;
   end: string;
   mode: Mode;
+  interests?: string[];
+  goals?: ("new" | "friends")[];
+  status?: "pending" | "filled" | "paused" | "expired" | "cancelled";
+  revision?: number;
+  hangoutId?: string | null;
 };
 export type Person = {
   id: string;
@@ -91,6 +103,7 @@ export type Hangout = {
   reason: string;
   score: number;
   seededVenue: boolean;
+  slotIds?: string[];
 };
 export type Feedback = {
   id: string;
@@ -126,7 +139,16 @@ export type AppState = {
 };
 
 export const availabilityInput = z
-  .object({ start: z.iso.datetime(), end: z.iso.datetime(), mode: modeSchema })
+  .object({
+    start: z.iso.datetime(),
+    end: z.iso.datetime(),
+    mode: modeSchema.default("either"),
+    interests: z.array(z.enum(interests)).max(10).default([]),
+    goals: z
+      .array(z.enum(["new", "friends"]))
+      .max(2)
+      .default([]),
+  })
   .refine(
     (v) => Date.parse(v.end) - Date.parse(v.start) >= 30 * 60000,
     "Add at least 30 minutes",
@@ -139,6 +161,16 @@ export const actionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("profile"), profile: profileSchema }),
   z.object({ action: z.literal("availability"), block: availabilityInput }),
   z.object({ action: z.literal("remove_availability"), id: z.uuid() }),
+  z.object({
+    action: z.literal("slot_status"),
+    id: z.uuid(),
+    status: z.enum(["pending", "paused"]),
+  }),
+  z.object({
+    action: z.literal("edit_availability"),
+    id: z.uuid(),
+    block: availabilityInput,
+  }),
   z.object({
     action: z.literal("plan"),
     goal: z.enum(["new", "friends", "either"]),

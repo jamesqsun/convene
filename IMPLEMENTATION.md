@@ -4,24 +4,26 @@ This is the working implementation tracker. Checked items are implemented; exter
 
 ## First working release
 
-The checked items below describe the existing build, not completion of the clarified automatic scheduling experience.
+The automatic slot flow is implemented locally. Hosted Supabase and scheduler verification are tracked separately below.
 
 ## Priority product corrections
 
 - [x] Document availability-driven automatic planning, unrestricted defaults, and multi-select semantics
 - [x] Specify persisted slot ranges, transactional enqueueing, overlap-first filtering, and matching indexes
-- [ ] Add pending-slot GiST range index and indexed durable queue with unique slot/revision jobs
-- [ ] Implement bounded overlap candidate queries before compatibility scoring and verify representative query plans
-- [ ] Replace the required planning button with automatic matching when availability is saved
-- [ ] Persist pending/filled/paused/expired/cancelled slot states, per-slot preferences, and event links
-- [ ] Add durable matching jobs triggered by relevant changes plus a scheduled recovery sweep; work while users are offline
-- [ ] Atomically fill both slots once, reject stale jobs, and deduplicate retries/concurrent scheduling
-- [ ] Default to one event per slot; expire unmatched slots and require explicit reopening after event cancellation
-- [ ] Show waiting/assigned/unfilled status and notify users when an event is assigned
-- [ ] Default activity, meeting mode, and connection preferences to “Surprise me” / “Any compatible option”
-- [ ] Use multi-select controls and set-based validation/matching for applicable preferences; retain scalar limits
-- [ ] Enforce actual nearby/travel eligibility rather than relying only on the current city filter
-- [ ] Verify delayed matches, offline matching, expiration, edits, cancellation, concurrency, and multi-select intersections
+- [x] Add pending-slot GiST range index and indexed durable queue with unique slot/revision jobs
+- [x] Implement 100-slot candidate pages before scoring; verify overlap GiST use on 6,000 synthetic slots
+- [x] Replace the required planning button with automatic matching when availability is saved
+- [x] Persist pending/filled/paused/expired/cancelled slot states, per-slot preferences, and event links
+- [x] Add durable jobs on slot/profile/connection changes, leased claims, retries, and independent recovery worker
+- [x] Atomically fill both slots once, reject stale jobs, and deduplicate retries/concurrent scheduling
+- [x] Default to one event per slot; expire unmatched slots and require explicit reopening after event cancellation
+- [x] Show waiting/assigned/unfilled status and announce new assignments in-app
+- [x] Default activity, meeting mode, and connection preferences to “Surprise me” / “Any compatible option”
+- [x] Multi-select activities, meeting modes, company, interests, platforms, and exclusions; retain scalar limits
+- [x] Connected proximity shortlist with spatial GiST and mutual straight-line radius checks; demo remains city-only
+- [x] Test delayed matches, expiration, edits, leases, atomic assignment, cancellation, and multi-select intersections
+- [ ] Verify hosted scheduler assignment while both real users are offline and concurrent workers under load
+- [ ] Add language and group-size multi-select when those workflows are implemented
 
 ## Existing implementation
 
@@ -48,14 +50,16 @@ The checked items below describe the existing build, not completion of the clari
 ## Verification notes
 
 - Domain tests exercise overlap, conflict subtraction, duration, exclusions, mode, budget, platforms, connections, timezone offsets, and feedback scoring.
-- Database tests execute the unchanged migration in PGlite with pgvector and btree_gist. They simulate Supabase auth roles and verify private-row visibility, denied client writes/RPCs, atomic scheduling, cancellation, duplicate feedback rejection, and blocking.
+- Database tests execute both migrations in PGlite with pgvector and btree_gist. They verify RLS, atomic scheduling, queue rollback, exclusive claims, expired lease recovery, stale tokens/revisions, cancellation, and browser-role access denial. A 6,000-slot `EXPLAIN (ANALYZE, BUFFERS)` fixture verifies overlap index use; this is not a production load benchmark.
 - HTTP smoke checks exercise isolated demo sessions, both planning modes, concurrent requests, feedback privacy, ownership, invalid input, and cross-origin rejection.
 - Browser walkthrough completed onboarding, availability, a generated plan, and post-hangout feedback. Desktop and phone layouts were inspected, including horizontal overflow.
+- Automatic-slot browser walkthrough verified multi-select activities/exclusions, save-to-assignment without a planning button, unmatched waiting state, and pause controls. The 390px phone layout had no horizontal overflow. The temporary verification server was stopped afterward.
 - Live Supabase Auth/email, deployed Postgres, and OpenAI API behavior are not verified without credentials. The local database tests do not replace those checks.
 
 ## External verification
 
-- [ ] Apply migration to a Supabase project and verify RLS with two accounts
+- [ ] Apply both migrations to Supabase and verify RLS with two accounts
+- [ ] Configure CRON_SECRET and a recurring worker; verify automatic offline matching and recovery
 - [ ] Verify signup, confirmation email, login, and logout against Supabase
 - [ ] Run live OpenAI extraction and embedding requests with project credentials
 - [ ] Deploy and verify on a phone over HTTPS
@@ -68,8 +72,8 @@ The checked items below describe the existing build, not completion of the clari
 - [ ] Granular memory merge/archive operations and semantic memory retrieval
 - [ ] Adaptive LLM follow-up conversation (current onboarding uses two written prompts)
 - [ ] Mutual reconnection consent and relationship cadence ranking
-- [ ] Notifications, reporting/moderation tools, and account deletion UI
-- [ ] Production candidate-query pagination and distributed rate limiting
+- [ ] Push/email notifications, reporting/moderation tools, and account deletion UI
+- [ ] Production query/load tuning, UI history pagination, queue retention/monitoring, and distributed rate limiting
 - [ ] International matching and translation
 
 The first release uses dated availability and seeded venue facts. It does not make reservations or write external calendar events. Demo mode is temporary and is not a production database.

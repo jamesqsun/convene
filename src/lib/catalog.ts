@@ -188,6 +188,7 @@ export function seedPeople(): Person[] {
     id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
     profile: {
       ...defaultProfile,
+      location: { latitude: 33.783, longitude: -84.383 },
       name,
       interests,
       about: summary,

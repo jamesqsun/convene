@@ -64,20 +64,26 @@ const request = {
   mode: "in_person",
   interest: "Coffee",
 };
-const parallel = await Promise.all([
-  a("/api/action", request),
-  a("/api/action", request),
-]);
-parallel.forEach((r) =>
-  assert.equal(r.response.status, 200, JSON.stringify(r.body)),
-);
 result = await a("/api/state");
 const plans = result.body.hangouts.filter((h) => h.status === "scheduled");
-assert.equal(plans.length, 2);
-assert.ok(
-  Date.parse(plans[0].end) <= Date.parse(plans[1].start) ||
-    Date.parse(plans[1].end) <= Date.parse(plans[0].start),
-  "Concurrent planning must not double-book.",
+assert.equal(
+  plans.length,
+  1,
+  "Saving availability automatically assigns one event.",
+);
+const slot = result.body.availability.find((s) => s.hangoutId === plans[0].id);
+assert.equal(slot.status, "filled");
+await Promise.all([a("/api/state"), a("/api/state")]);
+result = await a("/api/state");
+assert.equal(
+  result.body.hangouts.filter((h) => h.status === "scheduled").length,
+  1,
+);
+const manual = await a("/api/action", request);
+assert.equal(
+  manual.response.status,
+  410,
+  "Manual planning has been replaced by automatic slots.",
 );
 assert.ok(
   result.body.people.every(
@@ -122,11 +128,24 @@ result = await a("/api/action", {
 assert.equal(result.response.status, 409);
 result = await a("/api/action", { action: "cancel", id: plans[0].id });
 assert.equal(result.response.status, 200);
+assert.equal(
+  result.body.state.availability.find((s) => s.id === slot.id).status,
+  "cancelled",
+);
+assert.equal(
+  result.body.state.hangouts.filter((h) => h.status === "scheduled").length,
+  0,
+  "Cancelling must not immediately create another plan.",
+);
 result = await a("/api/action", {
-  action: "plan",
-  goal: "new",
-  mode: "online",
-  interest: "Music",
+  action: "availability",
+  block: {
+    start: start.toISOString(),
+    end: end.toISOString(),
+    mode: "online",
+    interests: ["Music"],
+    goals: [],
+  },
 });
 assert.equal(result.response.status, 200, JSON.stringify(result.body));
 assert.ok(result.body.state.hangouts.some((h) => !h.seededVenue));
@@ -146,5 +165,5 @@ assert.equal(
   "Feedback must stay inside its own session.",
 );
 console.log(
-  "API smoke checks passed: onboarding, session isolation, privacy, concurrent plans, both modes, cancellation, feedback, and invalid/cross-origin requests.",
+  "API smoke checks passed: onboarding, session isolation, privacy, automatic slot assignment, both modes, cancellation, feedback, and invalid/cross-origin requests.",
 );

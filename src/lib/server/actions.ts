@@ -1,11 +1,11 @@
 import "server-only";
 import { AppError, type Action, type Data, type Memory } from "../domain";
-import { plan } from "../planner";
+import { fillPendingSlots } from "../planner";
 import { understand } from "./ai";
 import { adminClient } from "./supabase";
 import { dbError } from "./store";
 
-export async function applyAction(
+async function mutate(
   data: Data,
   userId: string,
   mode: "demo" | "supabase",
@@ -60,7 +60,10 @@ export async function applyAction(
   }
   if (!data.people.some((p) => p.id === userId))
     throw new AppError("profile_required", "Complete your profile first.");
-  if (action.action === "availability") {
+  if (
+    action.action === "availability" ||
+    action.action === "edit_availability"
+  ) {
     if (Date.parse(action.block.start) <= Date.now())
       throw new AppError("past_availability", "Choose a time in the future.");
     if (Date.parse(action.block.end) > Date.now() + 90 * 86400000)
@@ -68,12 +71,53 @@ export async function applyAction(
         "far_availability",
         "Choose a time in the next 90 days.",
       );
-    if (data.availability.filter((b) => b.userId === userId).length >= 50)
+    if (
+      action.action === "availability" &&
+      data.availability.filter(
+        (b) =>
+          b.userId === userId &&
+          ["pending", "paused"].includes(b.status ?? "pending") &&
+          Date.parse(b.end) > Date.now(),
+      ).length >= 50
+    )
       throw new AppError(
         "availability_limit",
         "Remove an old time block before adding another.",
       );
-    const block = { ...action.block, id: crypto.randomUUID(), userId };
+    if (action.action === "edit_availability") {
+      const slot = data.availability.find(
+        (b) => b.id === action.id && b.userId === userId,
+      );
+      if (!slot || !["pending", "paused"].includes(slot.status ?? "pending"))
+        throw new AppError(
+          "schedule_conflict",
+          "Only waiting or paused slots can be edited.",
+          409,
+        );
+      if (db)
+        dbError(
+          (
+            await db.rpc("update_convene_slot", {
+              p_user: userId,
+              p_slot: slot.id,
+              p_status: slot.status ?? "pending",
+              p_block: action.block,
+            })
+          ).error,
+        );
+      else
+        Object.assign(slot, action.block, {
+          revision: (slot.revision ?? 1) + 1,
+        });
+      return;
+    }
+    const block = {
+      ...action.block,
+      id: crypto.randomUUID(),
+      userId,
+      status: "pending" as const,
+      revision: 1,
+    };
     if (db)
       dbError(
         (
@@ -83,37 +127,51 @@ export async function applyAction(
             start_time: block.start,
             end_time: block.end,
             mode: block.mode,
+            interests: block.interests,
+            goals: block.goals,
           })
         ).error,
       );
     else data.availability.push(block);
-  } else if (action.action === "remove_availability") {
+  } else if (
+    action.action === "remove_availability" ||
+    action.action === "slot_status"
+  ) {
+    const slot = data.availability.find(
+      (b) => b.id === action.id && b.userId === userId,
+    );
+    if (!slot || slot.status === "filled")
+      throw new AppError(
+        "schedule_conflict",
+        "Cancel the assigned plan before reopening this slot.",
+        409,
+      );
+    const status =
+      action.action === "remove_availability" ? "cancelled" : action.status;
+    if (status !== "cancelled" && Date.parse(slot.end) <= Date.now())
+      throw new AppError("past_availability", "This slot has expired.");
     if (db)
       dbError(
         (
-          await db
-            .from("availability_blocks")
-            .delete()
-            .eq("id", action.id)
-            .eq("user_id", userId)
-        ).error,
-      );
-    else
-      data.availability = data.availability.filter(
-        (b) => b.id !== action.id || b.userId !== userId,
-      );
-  } else if (action.action === "plan") {
-    const hangout = plan(data, userId, action);
-    if (db)
-      dbError(
-        (
-          await db.rpc("schedule_convene_hangout", {
-            p_user_id: userId,
-            p_hangout: hangout,
+          await db.rpc("update_convene_slot", {
+            p_user: userId,
+            p_slot: slot.id,
+            p_status: status,
           })
         ).error,
       );
-    else data.hangouts.push(hangout);
+    else
+      Object.assign(slot, {
+        status,
+        hangoutId: null,
+        revision: (slot.revision ?? 1) + 1,
+      });
+  } else if (action.action === "plan") {
+    throw new AppError(
+      "automatic_planning",
+      "Save an availability slot instead. Matching runs automatically.",
+      410,
+    );
   } else if (action.action === "cancel") {
     const hangout = data.hangouts.find(
       (h) => h.id === action.id && h.participantIds.includes(userId),
@@ -260,4 +318,26 @@ export async function applyAction(
       });
     }
   }
+}
+
+export async function applyAction(
+  data: Data,
+  userId: string,
+  mode: "demo" | "supabase",
+  action: Action,
+) {
+  const notice = await mutate(data, userId, mode, action);
+  if (mode === "demo") {
+    for (const slot of data.availability) {
+      if (
+        slot.status === "filled" &&
+        data.hangouts.some(
+          (h) => h.id === slot.hangoutId && h.status === "cancelled",
+        )
+      )
+        slot.status = "cancelled";
+    }
+    fillPendingSlots(data);
+  }
+  return notice;
 }
