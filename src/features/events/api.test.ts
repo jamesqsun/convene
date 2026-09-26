@@ -45,6 +45,8 @@ describe('event routes', () => {
         getProvider: async () => stubSessionProvider(id),
         getDatabase: async () => db,
         getPush: () => push,
+        getCalendar: () => null,
+        tokenSecret: () => 'x'.repeat(32),
         clock: () => now,
       })
     const detail = await routesFor(a).detail(

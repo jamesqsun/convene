@@ -30,3 +30,30 @@ export function withoutUsers(
 ): Segment[] {
   return segments.filter((segment) => !excluded.has(segment.userId))
 }
+
+export interface BusyRange {
+  startsAt: number
+  endsAt: number
+}
+
+/** Removes each person's busy time from their segments, keeping only remainders of at least an hour. */
+export function subtractBusy(
+  segments: readonly Segment[],
+  busyByUser: ReadonlyMap<UserId, readonly BusyRange[]>,
+): Segment[] {
+  const result: Segment[] = []
+  for (const segment of segments) {
+    let pieces: Segment[] = [segment]
+    for (const busy of busyByUser.get(segment.userId) ?? []) {
+      pieces = pieces.flatMap((piece) => {
+        if (busy.endsAt <= piece.start || busy.startsAt >= piece.end) return [piece]
+        const remainders: Segment[] = []
+        if (busy.startsAt > piece.start) remainders.push({ ...piece, end: busy.startsAt })
+        if (busy.endsAt < piece.end) remainders.push({ ...piece, start: busy.endsAt })
+        return remainders
+      })
+    }
+    result.push(...pieces.filter((piece) => piece.end - piece.start >= minOverlapMs))
+  }
+  return result
+}

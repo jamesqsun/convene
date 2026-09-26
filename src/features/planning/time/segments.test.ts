@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { hour, localDayBounds, minute } from '@/lib/time'
 import type { SlotRow } from '../types'
-import { clipSlotsToDay, withoutUsers } from './segments'
+import { clipSlotsToDay, subtractBusy, withoutUsers } from './segments'
 
 const tz = 'America/Toronto'
 const day = localDayBounds(tz, '2026-10-03')
@@ -51,5 +51,26 @@ describe('withoutUsers', () => {
   it('removes segments for excluded people', () => {
     const segments = clipSlotsToDay([slot('a', at(10), at(12)), slot('b', at(10), at(12))], day, 0)
     expect(withoutUsers(segments, new Set(['user-a'])).map((s) => s.userId)).toEqual(['user-b'])
+  })
+})
+
+describe('subtractBusy', () => {
+  it('splits segments around busy time and drops remainders under an hour', () => {
+    const segments = clipSlotsToDay([slot('a', at(10), at(16)), slot('b', at(10), at(12))], day, 0)
+    const busy = new Map([
+      [
+        'user-a',
+        [
+          { startsAt: at(12), endsAt: at(13) },
+          { startsAt: at(15, 30), endsAt: at(17) },
+        ],
+      ],
+      ['user-b', [{ startsAt: at(9), endsAt: at(11, 30) }]],
+    ])
+    expect(subtractBusy(segments, busy).map((s) => [s.userId, s.start, s.end])).toEqual([
+      ['user-a', at(10), at(12)],
+      ['user-a', at(13), at(15, 30)],
+    ])
+    expect(subtractBusy(segments, new Map())).toEqual(segments)
   })
 })

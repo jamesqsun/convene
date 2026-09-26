@@ -39,6 +39,13 @@ describe('plan reads', () => {
       name: '(Demo) Cafe',
       hoursVerified: false,
     })
+    expect(plan.calendarStatus).toBeNull()
+    await db.query(
+      "insert into event_calendar_entries (event_id, user_id, calendar_id, external_event_id, status) values ($1, $2, 'convene-demo', 'x', 'created')",
+      [eventId, a],
+    )
+    expect((await loadPlan(db, a, eventId, now))!.calendarStatus).toBe('created')
+    expect((await loadPlan(db, b, eventId, now))!.calendarStatus).toBeNull()
     expect(plan.participants.map((p) => [p.name, p.phone])).toEqual([
       ['Ann', '+14165550001'],
       ['Ben', '+14165550002'],

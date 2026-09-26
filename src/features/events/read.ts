@@ -33,6 +33,8 @@ export interface Plan {
   explanation: string
   participants: PlanParticipant[]
   canWithdraw: boolean
+  /** Whether the viewer's connected calendar holds this hangout. */
+  calendarStatus: 'created' | 'failed' | 'cancelled' | null
 }
 
 interface EventRow {
@@ -53,6 +55,7 @@ interface EventRow {
     lng: number
     hours_verified: boolean
   }
+  calendar_status: 'created' | 'failed' | 'cancelled' | null
 }
 
 interface ParticipantRow {
@@ -64,7 +67,7 @@ interface ParticipantRow {
 }
 
 const eventColumns =
-  'e.id, e.status, e.starts_at, e.ends_at, e.timezone, e.activity_id, e.activity_name, e.duration_minutes, e.explanation, e.venue'
+  'e.id, e.status, e.starts_at, e.ends_at, e.timezone, e.activity_id, e.activity_name, e.duration_minutes, e.explanation, e.venue, x.status as calendar_status'
 
 async function participantsFor(
   db: Db,
@@ -112,6 +115,7 @@ function toPlan(row: EventRow, participants: PlanParticipant[], now: number): Pl
     explanation: row.explanation,
     participants,
     canWithdraw: row.status === 'scheduled' && row.starts_at.getTime() > now,
+    calendarStatus: row.calendar_status,
   }
 }
 
@@ -129,6 +133,7 @@ export async function loadPlans(db: Db, userId: string, now: number): Promise<Pl
   const rows = await db.query<EventRow>(
     `select ${eventColumns} from events e
      join event_participants me on me.event_id = e.id and me.user_id = $1 and me.withdrawn_at is null
+     left join event_calendar_entries x on x.event_id = e.id and x.user_id = $1
      where e.ends_at > $2::timestamptz or e.status = 'cancelled'
      order by e.starts_at desc limit 50`,
     [userId, new Date(now).toISOString()],
@@ -149,6 +154,7 @@ export async function loadPlan(
   const rows = await db.query<EventRow>(
     `select ${eventColumns} from events e
      join event_participants me on me.event_id = e.id and me.user_id = $1 and me.withdrawn_at is null
+     left join event_calendar_entries x on x.event_id = e.id and x.user_id = $1
      where e.id = $2`,
     [userId, eventId],
   )
