@@ -4,6 +4,27 @@ This is the working implementation tracker. Checked items are implemented; exter
 
 ## First working release
 
+The checked items below describe the existing build, not completion of the clarified automatic scheduling experience.
+
+## Priority product corrections
+
+- [x] Document availability-driven automatic planning, unrestricted defaults, and multi-select semantics
+- [x] Specify persisted slot ranges, transactional enqueueing, overlap-first filtering, and matching indexes
+- [ ] Add pending-slot GiST range index and indexed durable queue with unique slot/revision jobs
+- [ ] Implement bounded overlap candidate queries before compatibility scoring and verify representative query plans
+- [ ] Replace the required planning button with automatic matching when availability is saved
+- [ ] Persist pending/filled/paused/expired/cancelled slot states, per-slot preferences, and event links
+- [ ] Add durable matching jobs triggered by relevant changes plus a scheduled recovery sweep; work while users are offline
+- [ ] Atomically fill both slots once, reject stale jobs, and deduplicate retries/concurrent scheduling
+- [ ] Default to one event per slot; expire unmatched slots and require explicit reopening after event cancellation
+- [ ] Show waiting/assigned/unfilled status and notify users when an event is assigned
+- [ ] Default activity, meeting mode, and connection preferences to “Surprise me” / “Any compatible option”
+- [ ] Use multi-select controls and set-based validation/matching for applicable preferences; retain scalar limits
+- [ ] Enforce actual nearby/travel eligibility rather than relying only on the current city filter
+- [ ] Verify delayed matches, offline matching, expiration, edits, cancellation, concurrency, and multi-select intersections
+
+## Existing implementation
+
 - [x] Next.js / React / TypeScript mobile-first application
 - [x] Dashboard, availability, plans, connections, and profile screens
 - [x] Guided onboarding and editable preferences

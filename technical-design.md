@@ -2,6 +2,37 @@
 
 ## 1. Product Scope
 
+### Authoritative clarification: automatic slot filling
+
+Availability is a durable invitation to schedule, not merely data for a button-driven request. Saving or editing a slot queues matching automatically. Unmatched slots remain pending and are reconsidered when another compatible slot is saved or relevant preferences change, with a scheduled background sweep to recover missed work. Matching continues while users are offline. References below to a “matching request” mean an internal job derived from a saved slot, not a required user action. This clarification supersedes older button-driven flow examples and singular preference fields in this document.
+
+Persist slot states (`pending`, `filled`, `paused`, `expired`, `cancelled`) and the assigned event link. A Sunday 15:00–20:00 coffee slot may be filled with a shorter coffee event wholly within both participants' overlapping windows. Default to one event per slot. Unused time is not automatically another invitation. A slot with no valid match stays pending until it expires; never relax hard constraints merely to fill it. Users can edit or pause waiting slots. Cancelling an assigned event must not immediately recreate it: require an explicit choice to reopen its slot.
+
+Use durable, idempotent background jobs and bounded retries, not browser timers or work that depends on an open tab. Recheck both slots' active state, current preferences, and availability inside the scheduling transaction; lock participants/slots consistently and atomically link the event and mark both slots filled. Concurrent jobs must not create duplicate events or double bookings. Slot edits invalidate stale jobs. Notify participants after commit with deduplication; surface waiting, assigned, and expired states in the UI.
+
+Activity, meeting mode, and connection category default to “Surprise me” / “Any compatible option.” Model these as an explicit unrestricted state or a nonempty set of acceptable values, rather than a single enum. Use multi-select for interests, activities, modes, languages, platforms, group sizes, and connection categories where multiple answers can coexist. Values within one dimension are alternatives (OR); constraints across dimensions must all hold (AND). Final plans choose a mutually acceptable activity, mode, and group size; required shared languages/platforms must exist. Explicit exclusions take precedence. Surprise/random selection never bypasses consent, safety, budget, travel, or scheduling constraints. Keep scalar limits and time bounds single-valued. Clearing the last selection returns to the clearly labeled unrestricted state.
+
+Acceptance checks: a slot without a match remains pending; a later compatible slot triggers one event without either user clicking plan; non-overlapping or geographically incompatible slots remain unfilled; retries and concurrent jobs create no duplicate; expired/paused slots cannot match; multiple selected activities are alternatives; unrestricted defaults still enforce exclusions. Real proximity enforcement is required for the nearby experience; the current city-only catalog filter is an implementation gap.
+
+### Persisted slots, matching triggers, and indexes
+
+Store each availability slot in Supabase Postgres with its owner, start/end instants, timezone for display, lifecycle state, preference sets, revision, and assigned event link. Represent the searchable window as a `tstzrange` with half-open bounds `[start, end)` and enforce `start < end`. Adjacent windows that only touch at an endpoint do not overlap.
+
+Saving a new slot or updating a pending slot must atomically persist the change and enqueue durable matching work in the same database transaction (a transactional outbox or database-backed queue). A lightweight database trigger may enqueue the job; it must not run compatibility scoring, call OpenAI, or perform network requests. Deduplicate work by slot ID and revision. Workers ignore stale revisions and use retryable claims with leases so crashes do not strand work.
+
+For each job, query pending, unexpired slots owned by other users using the range overlap operator `&&`. Apply inexpensive mutual eligibility checks before scoring: acceptable mode/activity intersections, relationship consent, blocks, geographic eligibility for in-person options, and existing reservations. Time overlap is only a coarse filter: the remaining shared window must fit the chosen activity's duration and any required buffers. Online options do not require nearby users. Retrieve preference memories or calculate semantic compatibility only for the eligible candidate pool, then choose a qualified match and commit using the atomic scheduling rules above.
+
+Required query/index design:
+
+- A partial GiST index on the slot time range with `WHERE status = 'pending'` supports cross-user overlap searches while excluding inactive slots. Query with the same pending predicate and an explicit current-time filter. Do not put `now()` in the partial-index predicate; expiration is handled by queries and lifecycle updates.
+- Retain a B-tree index with `user_id` as the leading column for owner-specific slot reads. The existing `(user_id, start_time, end_time)` index serves that purpose but is not a substitute for a cross-user range index.
+- When geographic matching is implemented, use a spatial GiST index on an appropriate PostGIS location column and an index-aware proximity query. Enforce both users' travel constraints; a shared city alone is insufficient. Keep private coordinates server-side.
+- Index durable work by claimable state and next-attempt time, and enforce a unique slot/revision job key. Use bounded candidate pages and stable continuation so a large overlap pool does not require loading every user into application memory. Continue through pages or subsequent jobs when early candidates fail rather than treating the first page as exhaustive.
+
+If no candidate qualifies, leave the slot pending. A later overlapping slot's job can match it without a click from either person. Relevant eligibility changes also enqueue reconsideration; a periodic recovery sweep retries missed work and expires old slots. Validate overlap and queue query plans with `EXPLAIN (ANALYZE, BUFFERS)` on representative data before scale deployment; do not assume an index will be chosen for tiny demo datasets. Test boundary-touching windows, insufficient overlap duration, delayed arrivals, stale revisions, worker retries, and competing jobs for the same slots.
+
+This is required implementation work: the current migration has an owner/time B-tree index and booking conflict protection, but does not yet provide the pending-slot range index or durable matching queue described here.
+
 Convene's goal is to turn user availability into real social plans by handling the coordination layer: understanding preferences, choosing compatible people, selecting activities, finding time, and generating hangouts.
 
 For the MVP, the goal is not to build the full social platform. The goal is to prove the core loop: a user gives Convene preferences and available time, and Convene produces a thoughtful plan with a compatible person.
@@ -35,7 +66,7 @@ These are not strictly required, but they make the product feel much more compel
 - Online vs. in-person planning branches
 - Existing-friend reconnection flow
 - Simple social graph visualization
-- "Plan my week" button
+- Automatic filling of pending weekly slots with visible matching status
 - Basic social-time allocation, such as new people vs. existing friends
 - Activity preference refinement after feedback
 - Mock calendar view showing generated events

@@ -4,6 +4,20 @@ This document lists the infrastructure, databases, APIs, credentials, and extern
 
 ## 0. Application Stack
 
+### Core scheduling and input requirements
+
+- Saving availability must start automatic matching; no user-facing plan-generation button is required. Pending slots wait for compatible overlapping slots, including ones created later while the original user is offline.
+- Use Supabase to persist slot lifecycle, per-slot preferences, event links, and durable matching work. Provide a server-side worker/job runner plus a scheduled recovery sweep; browser polling alone is insufficient. Secure worker endpoints and deduplicate retries.
+- Persist slot changes and enqueue matching work atomically through a database-backed queue or transactional outbox. Database triggers may enqueue work but must not execute scoring or external API calls. Deduplicate by slot ID/revision and support leased claims, bounded retries, and stale-job rejection.
+- Store searchable availability as half-open `tstzrange` windows. Add a partial GiST index for pending-slot overlap queries (`&&`), retain the owner B-tree index, and index ready work by status/next-attempt time. Filter expiration at query time; do not use a moving `now()` predicate in the partial index.
+- Query time overlaps and cheap mutual eligibility before compatibility scoring, using bounded candidate pages. Check sufficient activity duration after subtracting reservations. Add spatial indexing and index-aware proximity filtering when location support is implemented; online matching must remain possible across locations.
+- Validate query plans on representative data and test boundary overlaps, delayed slot creation, worker failures, and concurrent jobs. The existing owner/time index alone does not implement efficient cross-user overlap matching.
+- Revalidate and atomically reserve both participants and slots before committing one event per slot by default. Support pending, filled, paused, expired, and cancelled states. Expiration leaves unmatched slots visibly unfilled. Event cancellation requires an explicit reopen choice before automatic rematching.
+- Events must fit wholly inside shared availability and satisfy both users' location/travel constraints. Sunday 3–8 pm with coffee selected should wait for a compatible nearby person, then receive a shorter coffee event within that window.
+- Default optional activity, meeting-mode, and connection choices to “Surprise me” / “Any compatible option.” Randomness only applies among eligible options; it never overrides hard constraints or consent.
+- Support “select all that apply” for interests, activities, modes, languages, platforms, acceptable group sizes, and connection categories. Store sets or an explicit unrestricted state. Values in a set are alternatives; separate constraint dimensions all apply. Budget/radius limits and time bounds stay scalar.
+- Add verification for delayed matching, offline users, concurrent job deduplication, stale slot edits, expiration, proximity, multi-select intersections, and unrestricted defaults. Automatic slot filling is core MVP work, not a later calendar-integration feature.
+
 Convene should be built as a mobile-first web app with PWA support. This allows one codebase to work on desktop and mobile while still feeling like a phone app when installed to the home screen.
 
 Recommended stack:

@@ -31,9 +31,19 @@ Convene handles the coordination layer.
 
 ## Core Product Loop
 
+### Availability is the invitation
+
+Saving an availability slot authorizes Convene to fill it automatically. There is no required “Make plan,” “Make magic happen,” or “Plan my week” action. The slot stays waiting until a compatible person has overlapping availability; neither person needs to be online or press a button at the same time.
+
+For example, a user saves Sunday, 3–8 pm, optionally selecting coffee. Convene keeps that slot pending and, when a compatible nearby person is available, assigns a coffee event entirely within their shared window. The event occupies only its actual duration. Default to one event per slot; unused time does not authorize additional events unless the user opts in. If no match becomes available before the slot expires, show it as unfilled rather than forcing a poor match.
+
+Activity, meeting mode, and connection preferences default to “Surprise me” / “Any compatible option.” Users may optionally narrow them. Random selection always stays within both people's explicit constraints, exclusions, budget, travel limits, and consent settings.
+
+Use “select all that apply” for interests, activities, acceptable meeting modes, languages, platforms, acceptable group sizes, and connection categories. Selecting coffee and board games means either is acceptable, not that both must happen. Choose one final activity and mode from options acceptable to everyone. “Surprise me” is an unrestricted state, not an extra activity mixed into a selection. Scalar values such as maximum budget, travel radius, and slot start/end remain single values.
+
 1. User creates a social profile.
 2. Convene learns their interests, personality, preferences, and availability.
-3. User allocates blocks of time for social activity.
+3. User saves blocks of time for social activity, with optional multi-select preferences; saving starts automatic matching.
 4. Convene decides whether to:
    - Introduce them to someone new
    - Create a small group

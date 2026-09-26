@@ -8,6 +8,14 @@ Built with Next.js App Router, React, TypeScript, Tailwind CSS, **Supabase** (Po
 
 ## Quick start: explore without credentials
 
+### Intended product behavior and current gap
+
+Users save availability; Convene automatically fills it when a compatible person has overlapping availability. A Sunday 3–8 pm slot with coffee selected waits for a compatible nearby person, then receives a coffee event within that shared window. Users do not need to click a planning button or be online together. Default to one event per slot; no match means the slot stays pending until expiration.
+
+Optional preferences default to “Surprise me” / “Any compatible option.” Interests, activities, acceptable meeting modes, languages, platforms, group sizes, and connection categories should allow “select all that apply.” Selected activities are alternatives, not a requirement to do all of them. Random choices always respect both users' constraints.
+
+**The current implementation still uses a manual planning button and does not yet implement this automatic slot lifecycle or all of these multi-select controls.** The walkthrough below describes the existing build. The button can use other users' saved availability; simultaneous clicks are unnecessary, but the manual trigger must be replaced. See the priority correction checklist in [IMPLEMENTATION.md](IMPLEMENTATION.md).
+
 Requirements: Node.js 22 or newer and pnpm 11.19.0. Install pnpm with `npm install -g pnpm@11.19.0` if needed.
 
 ```sh
