@@ -1,3 +1,7 @@
+import { weekStartOf } from '@/features/availability/week-grid'
+import type { CalendarProvider } from '@/features/calendar/provider'
+import { saveConnection } from '@/features/calendar/store'
+import { syncUserCalendar } from '@/features/calendar/sync'
 import { resolveCity } from '@/features/cities/search'
 import { refreshDerived } from '@/features/memories/derived'
 import { memoryText, replaceMemories } from '@/features/memories/store'
@@ -18,12 +22,15 @@ export interface SeedOptions {
   now: number
   /** Connected mode creates auth users through Supabase; demo mode inserts the shim row directly. */
   ensureAuthUser?: (persona: Persona) => Promise<void>
+  /** Demo mode connects a couple of personas to the fictional calendar so the overlay has content. */
+  calendar?: { provider: CalendarProvider; tokenSecret: string }
 }
 
 export interface SeedSummary {
   people: number
   slots: number
   historyEvents: number
+  calendarsConnected: number
 }
 
 async function ensureDemoAuthUser(db: Db, persona: Persona): Promise<void> {
@@ -98,9 +105,33 @@ async function seedAvailability(db: Db, persona: Persona, now: number): Promise<
         city.timezone,
       ],
     )
+    // The week is "set by the persona", so carry-forward has a pattern to copy from later.
+    await db.query(
+      `insert into availability_weeks (user_id, week_start, status) values ($1, $2::date, 'confirmed') on conflict (user_id, week_start) do nothing`,
+      [persona.id, weekStartOf(city.timezone, zonedTime(city.timezone, date, 12))],
+    )
     inserted += 1
   }
   return inserted
+}
+
+const calendarPersonas = new Set(['maya@convene.demo', 'ben@convene.demo'])
+
+async function seedCalendar(
+  db: Db,
+  persona: Persona,
+  calendar: NonNullable<SeedOptions['calendar']>,
+  now: number,
+): Promise<boolean> {
+  if (!calendarPersonas.has(persona.email)) return false
+  const tokens = await calendar.provider.exchangeCode('seed', 'seed')
+  await saveConnection(db, persona.id, calendar.provider.kind, tokens, calendar.tokenSecret)
+  await syncUserCalendar(
+    { db, provider: calendar.provider, tokenSecret: calendar.tokenSecret },
+    persona.id,
+    now,
+  )
+  return true
 }
 
 export async function seedDemoWorld(
@@ -109,12 +140,19 @@ export async function seedDemoWorld(
   options: SeedOptions,
 ): Promise<SeedSummary> {
   let slots = 0
+  let calendarsConnected = 0
   for (const persona of personas) {
     await (options.ensureAuthUser ?? ((p: Persona) => ensureDemoAuthUser(db, p)))(persona)
     await upsertProfile(db, persona)
     await seedMemories(db, ai, persona)
     if (persona.isOnboarded) slots += await seedAvailability(db, persona, options.now)
+    if (
+      persona.isOnboarded &&
+      options.calendar &&
+      (await seedCalendar(db, persona, options.calendar, options.now))
+    )
+      calendarsConnected += 1
   }
   const historyEvents = await seedHistory(db, options.now)
-  return { people: personas.length, slots, historyEvents }
+  return { people: personas.length, slots, historyEvents, calendarsConnected }
 }

@@ -3,6 +3,8 @@ import path from 'node:path'
 import { PGlite, type Transaction } from '@electric-sql/pglite'
 import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist'
 import { vector } from '@electric-sql/pglite-pgvector'
+import { fakeCalendarProvider } from '@/features/calendar/fake'
+import { demoTokenSecret } from '@/features/calendar/store'
 import { fakeAiProvider } from '@/features/openai/fake'
 import { seedDemoWorld } from '@/features/seed/seed'
 import type { Db } from './db'
@@ -35,9 +37,12 @@ export async function createMigratedDb(): Promise<Db> {
 /** The demo server's database: migrated and populated with the fictional world on first use. */
 export async function openDemoDb(): Promise<Db> {
   const db = await createMigratedDb()
-  const summary = await seedDemoWorld(db, fakeAiProvider(), { now: Date.now() })
+  const summary = await seedDemoWorld(db, fakeAiProvider(), {
+    now: Date.now(),
+    calendar: { provider: fakeCalendarProvider(), tokenSecret: demoTokenSecret() },
+  })
   console.info(
-    `[demo] seeded ${summary.people} people, ${summary.slots} slots, ${summary.historyEvents} past hangouts`,
+    `[demo] seeded ${summary.people} people, ${summary.slots} slots, ${summary.historyEvents} past hangouts, ${summary.calendarsConnected} calendars`,
   )
   return db
 }

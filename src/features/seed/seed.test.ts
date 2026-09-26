@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { loadHangouts } from '@/features/events/read'
+import { fakeCalendarProvider } from '@/features/calendar/fake'
 import { fakeAiProvider } from '@/features/openai/fake'
 import { loadHistorySnapshot } from '@/features/planning/batch/history'
 import { pairKey } from '@/features/planning/buckets/reconnection'
@@ -18,10 +19,21 @@ beforeAll(async () => {
 
 describe('seedDemoWorld', () => {
   it('creates personas, memories, availability, and history idempotently', async () => {
-    const first = await seedDemoWorld(db, fakeAiProvider(), { now })
-    expect(first).toEqual({ people: 12, slots: 22, historyEvents: 2 })
-    const second = await seedDemoWorld(db, fakeAiProvider(), { now })
+    const calendar = { provider: fakeCalendarProvider(), tokenSecret: 'x'.repeat(32) }
+    const first = await seedDemoWorld(db, fakeAiProvider(), { now, calendar })
+    expect(first).toEqual({ people: 12, slots: 22, historyEvents: 2, calendarsConnected: 2 })
+    const second = await seedDemoWorld(db, fakeAiProvider(), { now, calendar })
     expect(second.historyEvents).toBe(0)
+    expect(
+      (await db.query<{ n: number }>('select count(*)::int as n from calendar_connections'))[0]!.n,
+    ).toBe(2)
+    expect(
+      (
+        await db.query<{ n: number }>(
+          "select count(*)::int as n from availability_weeks where status = 'confirmed'",
+        )
+      )[0]!.n,
+    ).toBeGreaterThan(0)
     expect((await db.query<{ n: number }>('select count(*)::int as n from profiles'))[0]!.n).toBe(
       12,
     )

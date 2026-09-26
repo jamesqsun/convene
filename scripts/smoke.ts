@@ -18,8 +18,21 @@ class Session {
     body?: unknown,
     expected = 200,
   ): Promise<T> {
+    const response = await this.raw(method, path, body)
+    const text = await response.text()
+    if (response.status !== expected) {
+      throw new Error(
+        `${method} ${path} -> ${response.status} (expected ${expected}): ${text.slice(0, 300)}`,
+      )
+    }
+    return (text ? JSON.parse(text) : undefined) as T
+  }
+
+  /** A request without redirect following, keeping any cookies the response sets. */
+  async raw(method: string, path: string, body?: unknown): Promise<Response> {
     const response = await fetch(`${baseUrl}${path}`, {
       method,
+      redirect: 'manual',
       headers: {
         'content-type': 'application/json',
         origin: requestOrigin,
@@ -32,12 +45,7 @@ class Session {
       const [name, value] = pair!.split('=')
       if (name && value !== undefined) this.cookies.set(name, value)
     }
-    const text = await response.text()
-    if (response.status !== expected)
-      throw new Error(
-        `${method} ${path} -> ${response.status} (expected ${expected}): ${text.slice(0, 300)}`,
-      )
-    return (text ? JSON.parse(text) : undefined) as T
+    return response
   }
 }
 
@@ -222,6 +230,53 @@ async function newcomerFlow(): Promise<void> {
   )
   const key = await user.call<{ publicKey: string | null }>('GET', '/api/push/public-key')
   check(typeof key.publicKey === 'string', 'a VAPID public key is available in demo mode')
+  await calendarFlow(user)
+}
+
+async function calendarFlow(user: Session): Promise<void> {
+  console.log('Calendar flow')
+  const connect = await user.raw('GET', '/api/calendar/google/connect')
+  check(connect.status === 302, 'connect redirects to the provider')
+  const location = new URL(connect.headers.get('location')!)
+  const callback = await user.raw('GET', `${location.pathname}${location.search}`)
+  check(
+    callback.headers.get('location') === '/availability?calendar=connected',
+    'callback completes the connection',
+  )
+  const status = await user.call<{
+    connection: { accountEmail: string } | null
+    calendars: { id: string }[]
+  }>('GET', '/api/calendar')
+  check(status.connection?.accountEmail === 'you@gmail.demo', 'calendar is connected')
+  check(status.calendars.length === 2, 'two fictional calendars are listed')
+  const nextMonday = new Date(Date.now() + 7 * 86_400_000)
+  nextMonday.setUTCDate(nextMonday.getUTCDate() - ((nextMonday.getUTCDay() + 6) % 7))
+  const weekStart = nextMonday.toISOString().slice(0, 10)
+  const saved = await user.call<{
+    result: { created: number }
+    week: { busy: unknown[]; status: string }
+  }>('PUT', `/api/availability/weeks/${weekStart}`, {
+    windows: [
+      { day: 5, start: '10:00', end: '13:00' },
+      { day: 6, start: '14:00', end: '17:00' },
+    ],
+  })
+  check(saved.result.created === 2, 'a week of windows is saved as two slots')
+  check(
+    saved.week.status === 'confirmed' && saved.week.busy.length > 0,
+    'the week view shows busy time from the connected calendar',
+  )
+  await user.call(
+    'PUT',
+    `/api/availability/weeks/${weekStart}`,
+    { windows: [{ day: 0, start: '10:00', end: '10:30' }] },
+    400,
+  )
+  console.log('  ok  a thirty-minute window is rejected')
+  await user.call('POST', '/api/calendar/calendars', { selected: ['primary'] })
+  await user.call('DELETE', '/api/calendar', undefined, 204)
+  const after = await user.call<{ connection: unknown }>('GET', '/api/calendar')
+  check(after.connection === null, 'disconnect clears the connection')
 }
 
 async function pages(): Promise<void> {

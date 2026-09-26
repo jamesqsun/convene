@@ -83,6 +83,28 @@ async function mayaFlow(page: Page): Promise<void> {
   await step('sees seeded availability waiting for its batch', () =>
     waitForText(page, 'Waiting for its planning batch'),
   )
+  await step('sees the week grid with the connected calendar overlay', async () => {
+    await waitForText(page, 'Your week')
+    await waitForText(page, 'you@gmail.demo')
+    await page.waitForSelector('[data-cell]', { timeout })
+    await waitForText(page, 'Work')
+  })
+  await step('paints a window next week and saves it', async () => {
+    await clickText(page, 'Next →')
+    await page.waitForSelector('[data-cell="6:30"]:not([disabled])', { timeout })
+    const first = (await page.$('[data-cell="6:30"]'))!
+    const last = (await page.$('[data-cell="6:33"]'))!
+    await first.evaluate((element) => element.scrollIntoView({ block: 'center' }))
+    const from = (await first.boundingBox())!
+    const to = (await last.boundingBox())!
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 6 })
+    await page.mouse.up()
+    await clickText(page, 'Save this week')
+    await waitForText(page, 'Saved: 1 added')
+    await clickText(page, '← Previous')
+  })
   await shot(page, 'availability-before')
   await step('runs planning from the demo button and gets an assignment banner', async () => {
     await clickText(page, 'Run planning now (demo)')
