@@ -66,6 +66,10 @@ describe('applyProfilePatch', () => {
     const before = (await loadProfile(db, userId))!
     const after = await applyProfilePatch(db, userId, { name: 'Renamed' })
     expect(after).toEqual({ ...before, name: 'Renamed' })
+    expect(
+      (await applyProfilePatch(db, userId, { isRepeatingAvailability: false }))
+        .isRepeatingAvailability,
+    ).toBe(false)
     expect(await loadProfile(db, '00000000-0000-0000-0000-000000000000')).toBeNull()
   })
 })

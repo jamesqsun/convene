@@ -16,6 +16,7 @@ describe('ProfilePage', () => {
         timezone: null,
         cityLabel: 'Toronto',
         memoryCount: 0,
+        isRepeatingAvailability: true,
       },
       slots: [],
       plans: [],

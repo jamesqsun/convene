@@ -16,6 +16,7 @@ export interface AppState {
     timezone: string | null
     cityLabel: string | null
     memoryCount: number
+    isRepeatingAvailability: boolean
   }
   slots: (Slot & { state: string; expectedBatchAt: number })[]
   plans: Plan[]
@@ -43,6 +44,7 @@ export async function loadState(db: Db, userId: string, now: number): Promise<Ap
       timezone: profile.city?.timezone ?? null,
       cityLabel: profile.city?.name ?? null,
       memoryCount: profile.memoryCount,
+      isRepeatingAvailability: profile.isRepeatingAvailability,
     },
     slots: slots.map((slot) => ({
       ...slot,

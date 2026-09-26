@@ -15,6 +15,7 @@ const state = (onboardingStep: string): ClientState => ({
     timezone: 'America/Toronto',
     cityLabel: 'Toronto',
     memoryCount: 0,
+    isRepeatingAvailability: true,
   },
   slots: [],
   plans: [],

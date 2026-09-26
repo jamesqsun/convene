@@ -119,6 +119,35 @@ describe('availability routes', () => {
     ).toBe(404)
   })
 
+  it('reads and saves a week of windows', async () => {
+    const routes = routesFor(userId)
+    expect(
+      (
+        await routes.week(
+          jsonRequest('GET', '/api/availability/weeks/2026-10-06'),
+          withParams({ weekStart: '2026-10-06' }),
+        )
+      ).status,
+    ).toBe(400)
+    const saved = await routes.saveWeek(
+      jsonRequest('PUT', '/api/availability/weeks/2026-10-05', {
+        windows: [{ day: 2, start: '18:00', end: '21:00' }],
+      }),
+      withParams({ weekStart: '2026-10-05' }),
+    )
+    expect(saved.status).toBe(200)
+    const body = (await saved.json()) as { result: { created: number }; week: { status: string } }
+    expect(body.result.created).toBe(1)
+    expect(body.week.status).toBe('confirmed')
+    const read = (await (
+      await routes.week(
+        jsonRequest('GET', '/api/availability/weeks/2026-10-05'),
+        withParams({ weekStart: '2026-10-05' }),
+      )
+    ).json()) as { week: { slots: { state: string }[] } }
+    expect(read.week.slots.map((s) => s.state)).toEqual(['waiting'])
+  })
+
   it('requires a session and a chosen city', async () => {
     expect(
       (await routesFor(null).create(jsonRequest('POST', '/api/availability', input), noParams))

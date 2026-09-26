@@ -21,6 +21,7 @@ export interface Profile {
   answers: Answer[]
   onboardingCompletedAt: number | null
   memoryCount: number
+  isRepeatingAvailability: boolean
 }
 
 interface ProfileRow {
@@ -37,6 +38,7 @@ interface ProfileRow {
   onboarding_answers: Answer[]
   onboarding_completed_at: Date | null
   memory_count: number
+  is_repeating_availability: boolean
 }
 
 function toProfile(row: ProfileRow): Profile {
@@ -59,6 +61,7 @@ function toProfile(row: ProfileRow): Profile {
     answers: row.onboarding_answers,
     onboardingCompletedAt: row.onboarding_completed_at?.getTime() ?? null,
     memoryCount: row.memory_count,
+    isRepeatingAvailability: row.is_repeating_availability,
   }
 }
 
@@ -91,7 +94,8 @@ export async function applyProfilePatch(
          city_lat = coalesce($7, city_lat), city_lng = coalesce($8, city_lng),
          phone_e164 = coalesce($9, phone_e164),
          interests = coalesce($10, interests),
-         onboarding_answers = coalesce($11::jsonb, onboarding_answers)
+         onboarding_answers = coalesce($11::jsonb, onboarding_answers),
+         is_repeating_availability = coalesce($12, is_repeating_availability)
        where id = $1`,
       [
         userId,
@@ -105,6 +109,7 @@ export async function applyProfilePatch(
         patch.phone ?? null,
         patch.interests ?? null,
         patch.answers ? JSON.stringify(patch.answers) : null,
+        patch.isRepeatingAvailability ?? null,
       ],
     )
     const profile = (await loadProfile(tx, userId))!

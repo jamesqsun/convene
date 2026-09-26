@@ -5,7 +5,7 @@ import { fakeAppState } from '@/features/state/useAppState.test'
 import { AvailabilityPage } from './AvailabilityPage'
 
 describe('AvailabilityPage', () => {
-  it('renders the form, the demo runner, and an empty state', () => {
+  it('renders nothing on the server before state and the week are known', () => {
     const state = {
       serverNow: 0,
       mode: 'demo' as const,
@@ -16,6 +16,7 @@ describe('AvailabilityPage', () => {
         timezone: 'America/Toronto',
         cityLabel: 'Toronto',
         memoryCount: 0,
+        isRepeatingAvailability: true,
       },
       slots: [],
       plans: [],
@@ -26,8 +27,6 @@ describe('AvailabilityPage', () => {
         <AvailabilityPage />
       </AppStateContext.Provider>,
     )
-    expect(html).toContain('Add availability')
-    expect(html).toContain('Run planning now (demo)')
-    expect(html).toContain('No availability yet')
+    expect(html).toBe('')
   })
 })
