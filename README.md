@@ -122,6 +122,31 @@ possible before the start; attendance is assumed afterwards.
 Row level security is enabled on every table with no policies for the browser roles, so PostgREST
 exposes nothing; all access goes through the authenticated server routes.
 
+### Reset connected data to the seed
+
+`pnpm seed` updates the fictional personas but preserves other users and existing history.
+For a clean start, stop the app, worker, and hosted cron, then run:
+
+```sh
+pnpm db:reset --yes
+```
+
+This requires `CONVENE_MODE=supabase` and the same environment as `pnpm seed`. It applies pending
+migrations, permanently deletes **every Supabase Auth user** (including real accounts), and replaces
+all Convene table data with 12 fictional accounts, 22 future availability slots, two past hangouts,
+and their seeded feedback/friendships. Accounts use `SEED_PASSWORD`. Without `--yes`, it refuses
+before connecting. Use a dedicated development Supabase project.
+
+Dates are relative to the reset time; generated row IDs and timestamps are fresh. Reset always uses
+the deterministic demo embeddings, even if an OpenAI key is configured, and makes no AI, Places,
+or push calls. Project settings, Storage, unrelated tables, and existing schema are preserved;
+this is a data reset, not a repair of manually changed schema. Users owning Storage objects must
+have those objects removed or reassigned before Auth deletion can succeed.
+
+Auth API changes cannot be rolled back together with SQL. If interrupted, fix the reported error
+and rerun the command; it clears partial seed state on retry. Keep writers stopped until it succeeds,
+then restart the app/scheduler and sign in again.
+
 ## Checks
 
 ```sh

@@ -139,6 +139,12 @@ to reverse later won.
 
 ## Seed
 
+- **Connected reset is explicit and destructive.** `pnpm db:reset --yes` removes all Auth users
+  through the Admin API and truncates the explicit Convene table list without CASCADE, preserving
+  managed schemas and unrelated tables. It reuses the demo seed and deterministic embeddings;
+  dates are relative to the run. Auth operations are not transactional with SQL, so failed runs
+  are retried with writers stopped. This resets data, not project settings or schema drift.
+
 - **Twelve personas across two cities**, one deliberately mid-onboarding and one (Hugo) whose
   evening window is too short to overlap anyone by an hour, so the demo shows an unmatched slot.
 - **History is inserted directly**, bypassing the batch driver, with committed proposals so every
