@@ -1,0 +1,14 @@
+@import 'tailwindcss';
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  /* The bottom nav is fixed; keep scrolled-into-view targets clear of it. */
+  scroll-padding-bottom: 5.5rem;
+}
+
+body {
+  @apply bg-stone-50 text-stone-900 antialiased;
+}
