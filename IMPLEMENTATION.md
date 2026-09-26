@@ -2,6 +2,26 @@
 
 This is the working implementation tracker. Checked items are implemented; external service verification is tracked separately.
 
+## Revised hackathon pipeline — planned, not implemented
+
+The September 26 target in technical-design.md and technical-requirements.md supersedes the earlier product scope. Existing checked items below describe the current/previous implementation, not completion of the rework.
+
+- [ ] Remove scheduling activity selections/exclusions, budget, group-size, platform/tool, meeting-mode, travel-radius, and connection-category controls from UI and input contracts; retain onboarding interests and answers.
+- [ ] Replace multi-app contact setup with private phone-only participant coordination; remove online planning and blocking/relationship-consent workflows from the revised demo scope.
+- [ ] Define a migration for existing data and disable immediate pair matching when the batch pipeline is enabled.
+- [ ] Add normalized city/time-zone partitioning, daily local-date batches, late-arrival handling, and durable retry recovery.
+- [ ] Enforce at least 48 elapsed hours' notice at final booking, including retries and DST boundaries.
+- [ ] Generate buckets at submitted/clipped start boundaries with a 60-minute minimum; preserve full common windows.
+- [ ] Select buckets by people count plus capped reconnection bonus with stable tie-breaking; recompute membership, pairs, scores, and windows after removals and discard counts below two.
+- [ ] Add explicit mutual friendship records/seed data and completed shared-event recency, with creation-time fallback and a stable per-pass history snapshot.
+- [ ] Apply initial 14-to-60-day pair bonus ramp (0 to 1), cap total bucket bonus at 50% of participant count, and verify pair deduplication and score boundaries.
+- [ ] Enforce one event per person/planning date and per slot, including multiple-slot and cross-midnight deduplication.
+- [ ] Partition buckets using normalized profile similarity plus reconnection priority into groups of 2–10 without singletons; recalculate member rankings and final group windows.
+- [ ] Add structured activity ranking, one-hour event defaults, Maps venue search, and bounded fallback behavior.
+- [ ] Extend atomic pair booking to all group members with stale-snapshot checks, unique planning IDs, and conflict protection.
+- [ ] Persist deduplicated notification jobs with assignment; implement mobile push separately from phone contact sharing.
+- [ ] Update runnable setup documentation and verify the new flow locally and against hosted services.
+
 ## First working release
 
 The automatic slot flow is implemented locally. Hosted Supabase and scheduler verification are tracked separately below.

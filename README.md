@@ -1,5 +1,7 @@
 # Convene
 
+> **Planning rework agreed, implementation pending:** [Technical design](technical-design.md), [technical requirements](technical-requirements.md), and [product overview](overview.md) now specify daily city-based batches, at least 48 hours' notice, one-hour overlap buckets, and in-person groups with phone coordination. The target removes activity, budget, group-size, platform/tool, mode, travel-radius, and connection-category controls, plus online and blocking workflows. The instructions below describe the current runnable implementation, which still includes those older features. Track the transition in [IMPLEMENTATION.md](IMPLEMENTATION.md).
+
 **You give Convene time. Convene turns it into plans.**
 
 A mobile-first social planning app: get to know a person, find compatible company, pick a shared activity, schedule a hangout, and learn from private feedback.

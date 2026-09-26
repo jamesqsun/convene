@@ -1,417 +1,48 @@
-# Convene - Quick Design Doc
-
-## Overview
-
-Convene is a virtual "connector" friend that removes the friction from making and maintaining real social connections.
-
-Instead of making users browse profiles, coordinate schedules, decide what to do, and manually plan everything, Convene learns what they enjoy, understands when they are available, and automatically schedules blind social hangouts with compatible new people or existing friends.
-
-The core idea is simple:
+# Convene — Product Overview
 
 > You give Convene time. Convene turns it into plans.
 
-Convene can coordinate both in-person and online hangouts, with a focus on creating real human interaction rather than replacing it with AI.
+Convene removes the coordination work of meeting people: comparing schedules, choosing company, deciding what to do, and finding a place.
 
-## Problem
+## Revised hackathon MVP
 
-People often want to socialize more, meet new people, or reconnect with friends, but several points of friction get in the way:
+This is the agreed target as of September 26, 2026. The pipeline rework is not implemented yet. README.md documents the current running application, IMPLEMENTATION.md tracks the transition, and technical-design.md specifies the new algorithm.
 
-- Finding compatible people
-- Reaching out first
-- Comparing schedules
-- Choosing an activity
-- Picking a location
-- Coordinating a group
-- Remembering to reconnect with people
-- Decision fatigue from browsing profiles or events
+Users create a profile with interests and short answers, provide a city and private phone number, and submit dated availability. For scheduling, availability is the only choice they make. Convene chooses the other people, activity, venue, and exact time.
 
-Traditional social apps generally help users discover people, but still leave most of the work required to actually meet them to the user.
+Hangouts are in-person only. Phone numbers provide participant coordination. The MVP assumes people can reach venues within their city.
 
-Convene handles the coordination layer.
+Remove activity selections/exclusions, budgets, preferred group sizes, tool/platform choices, meeting-mode choices, travel-radius controls, and connection-category choices from the target flow. Online planning and blocking/relationship-consent workflows are outside this hackathon scope. Profile interests remain useful for learning who people are.
 
-## Core Product Loop
+## Planning flow
 
-### Availability is the invitation
+1. Saving availability queues the user for a daily planning batch.
+2. At midnight in each city's time zone, plan for the local date two days ahead. Every final assignment must still provide at least 48 elapsed hours of notice.
+3. Find candidate groups sharing at least one hour. Use actual availability start boundaries rather than fixed hourly slots.
+4. Select the highest-scoring time bucket using people count plus a capped bonus for friends who have not met recently, remove its people from other candidates, and repeat. Every selected bucket has at least two distinct people and retains its full shared window.
+5. Split each bucket into groups of 2–10 using profile similarity and reconnection priority so overdue friends are more likely to share the final event. Group size is chosen by the application.
+6. Use relevant preference memories to rank in-person activities suitable for a one-hour event.
+7. Find a venue in the city with Maps/Places and select an exact time inside shared availability.
+8. Save the group event atomically and notify participants after assignment. PWA push requires separate implementation.
 
-Saving an availability slot authorizes Convene to fill it automatically. There is no required “Make plan,” “Make magic happen,” or “Plan my week” action. The slot stays waiting until a compatible person has overlapping availability; neither person needs to be online or press a button at the same time.
+For example, availability beginning at 11:10 is valid; there is no requirement to start on the hour. One hour is the minimum overlap and default event duration, not a start-time grid.
 
-For example, a user saves Sunday, 3–8 pm, optionally selecting coffee. Convene keeps that slot pending and, when a compatible nearby person is available, assigns a coffee event entirely within their shared window. The event occupies only its actual duration. Default to one event per slot; unused time does not authorize additional events unless the user opts in. If no match becomes available before the slot expires, show it as unfilled rather than forcing a poor match.
+The MVP assigns at most one hangout per person per planning date and one per availability slot. Candidate buckets can overlap during evaluation, but selected buckets do not share people. People without a viable bucket remain unmatched.
 
-Activity, meeting mode, and connection preferences default to “Surprise me” / “Any compatible option.” Users may optionally narrow them. Random selection always stays within both people's explicit constraints, exclusions, budget, travel limits, and consent settings.
+Count-based selection with a reconnection bonus is a deliberate simplification: it favors larger pools and overdue friendships but may match fewer people than another arrangement. It does not optimize the smallest bucket globally. Without friendship bonuses it reduces to largest-first.
 
-Use “select all that apply” for interests, activities, acceptable meeting modes, languages, platforms, acceptable group sizes, and connection categories. Selecting coffee and board games means either is acceptable, not that both must happen. Choose one final activity and mode from options acceptable to everyone. “Surprise me” is an unrestricted state, not an extra activity mixed into a selection. Scalar values such as maximum budget, travel radius, and slot start/end remain single values.
+The initial reconnection bonus is zero for the first 14 days since a friend's last completed shared hangout, then grows linearly to +1 per unique friend pair at 60 days. The total bucket bonus is capped at half the participant count. Use explicit mutual friendships (seeded for the demo), with friendship creation time as a fallback if there is no completed meeting history. Scheduled and cancelled plans do not count as meetings. Reconnection also influences final grouping, but is a preference rather than a guarantee; all availability and group-size rules still hold.
 
-1. User creates a social profile.
-2. Convene learns their interests, personality, preferences, and availability.
-3. User saves blocks of time for social activity, with optional multi-select preferences; saving starts automatic matching.
-4. Convene decides whether to:
-   - Introduce them to someone new
-   - Create a small group
-   - Reconnect them with an existing friend
-5. Convene finds an appropriate activity.
-6. For in-person events, Convene determines a fair location and venue.
-7. For online events, Convene determines a shared activity or event.
-8. Convene schedules the hangout.
-9. Afterward, lightweight feedback updates the user's preference profile.
+## User experience
 
-## Onboarding and Interest Profile
+Show when a slot is waiting for its batch, when a plan is assigned, and when no plan was found. Users can edit or pause unassigned slots. Late additions are considered only if a complete event can still meet the 48-hour notice rule. Existing plans stay stable.
 
-### Contact information and communication platforms
+Assigned-plan details show the people, activity, venue, time, and private participant phone contacts. Cancellation closes slots rather than immediately creating replacement plans.
 
-Collect a phone number with country code during onboarding. Communication platforms are a multi-select choice: Phone / SMS, Discord, WhatsApp, Instagram, and Telegram. Selecting a platform reveals the required username/handle or WhatsApp number field; do not confuse messaging apps with devices such as PC/Switch or activity tools such as a browser.
+## Implementation boundaries
 
-Each assigned event must have a usable communication method that both participants explicitly selected. Show only that method's contact details in participant-only plan details, never in public profiles or AI preference prompts. A stored phone number is shared only when Phone / SMS is the chosen enabled method (or the user supplied it separately for WhatsApp). Cancelled or blocked/declined matches lose further contact display. Phone/handle ownership verification is future work; communicate that entries are user-provided.
+Use AI for preference interpretation and activity ranking. Use backend code for availability, notice, group-size validation, deduplication, privacy, and booking. Maps provides venue facts; do not invent venues or imply reservations.
 
-Onboarding should combine a structured form with an LLM conversation.
+The stack remains Next.js, React, TypeScript, Tailwind, Supabase, pgvector, and OpenAI, with Maps/Places added for the new location flow. Retain the mobile-first PWA approach. Native app distribution is not required.
 
-### Initial Form
-
-Collect concrete information such as:
-
-- General interests
-- Availability
-- Online vs. in-person preference
-- Maximum travel distance
-- Preferred group sizes
-- Social frequency
-- Existing friends
-- Languages
-- Activities they enjoy
-- Activities they want to try
-
-### LLM Follow-Up
-
-After the basic form, Convene acts like a friend getting to know the user and asks more expressive questions.
-
-Examples:
-
-- What kind of people do you usually get along with?
-- Would you rather spend Saturday hiking or exploring a city?
-- What's your favorite thing to eat?
-- What's something you could talk about for hours?
-- What kind of person inspires you?
-- Are you more interested in ambitious people, laid-back people, outdoorsy people, etc.?
-- What's something you've always wanted to try?
-
-These can have a Hinge-prompt-like feel, where the answers reveal personality better than checkboxes.
-
-The LLM converts answers into a structured interest/preference profile.
-
-### Ongoing Learning
-
-Convene should continue learning after onboarding.
-
-Notifications can periodically ask low-friction questions such as:
-
-- Coffee or boba?
-- Concert or hiking trail?
-- Would you try rock climbing if someone invited you?
-- You've been doing a lot of gaming hangouts lately. Want Convene to prioritize outdoor plans next week?
-
-Also include events nearby or that are world famous, like Barcelona winning the Champions League.
-
-These interactions continuously refine the user's profile.
-
-## Social Time Allocation
-
-Users choose how much time they want Convene to manage.
-
-Example:
-
-> 4 social hours/week
-
-- 2 hours meeting new people
-- 1 hour with existing friends
-- 1 hour reconnecting with people they haven't seen recently
-
-The user could configure percentages or simply tell Convene:
-
-> "I want to meet one new person every week and hang out with friends twice a month."
-
-Convene translates that into scheduling goals.
-
-Elaboration: use the Google Calendar API so Convene knows when the user is free, lets users time block free times, and adds events.
-
-## New Connections
-
-Convene matches users using a mixture of:
-
-- Shared interests
-- Complementary interests
-- Personality/social preferences
-- Availability
-- Distance
-- Preferred activities
-- Preferred group size
-- Previous social feedback
-- Desire for familiarity vs. novelty
-
-Matching should include controlled randomness.
-
-Convene should not always choose the mathematically most similar person. Instead, it should choose from a set of sufficiently compatible people so that interactions still feel spontaneous.
-
-An adventurous-to-comfortable slider determines whether people you meet are more likely to be different, while comfortable means you're more likely to meet similar people.
-
-This creates the blind hangout experience.
-
-## In-Person Hangouts
-
-For an in-person match, Convene determines both what to do and where to do it.
-
-### Inputs
-
-- Participant locations
-- Travel radius
-- Transportation constraints
-- Shared interests
-- Budget
-- Availability
-- Venue hours
-- Desired meeting length
-- Preferred environment
-
-### Example
-
-Three users like:
-
-- Board games
-- Coffee
-- Asian food
-
-Convene identifies a geographically fair area and schedules:
-
-> Saturday 2:30-4:00 PM  
-> Board-game cafe
-
-Location selection should optimize travel fairness, rather than simply choosing a geographic midpoint.
-
-## Online Hangouts
-
-Online meetings should still revolve around an actual shared experience rather than simply generating a video-call link.
-
-Examples include:
-
-- League duo queue
-- Minecraft
-- Discord gaming session
-- Watch party
-- Movie
-- Collaborative playlist exchange
-- Online board game
-- Virtual study session
-- Coding/project session
-- Music-sharing session
-
-Convene selects the activity based on the group's interests.
-
-Include info like user platforms to communicate, such as Discord.
-
-Example:
-
-> You and Alex both play League casually and are free Wednesday night.  
-> Convene schedules:  
-> Wednesday, 8:30 PM - League Duo
-
-## Friends and Relationship Graph
-
-Users maintain a friends list containing:
-
-- Existing friends
-- People they meet through Convene
-- Previous hangout history
-
-After meeting someone, users can choose:
-
-> Add to friends
-
-Convene gradually builds a relationship graph rather than just a list of matches.
-
-Relationship metadata may include:
-
-- Number of previous meetings
-- Last interaction
-- Shared activities
-- Mutual desire to meet again
-- Typical interaction frequency
-
-This allows Convene to manage both new and existing relationships.
-
-## Reconnection
-
-Convene should help prevent relationships from fading because nobody initiates plans.
-
-For example:
-
-> You and Jordan usually hang out once every few weeks, but you haven't seen each other in two months.
-
-Convene notices:
-
-- Both users want to reconnect
-- Both are free Thursday
-- Both frequently get food together
-
-It schedules:
-
-> Thursday, 7 PM - Dinner with Jordan
-
-The product therefore supports two kinds of connection:
-
-- Creating relationships
-- Maintaining relationships
-
-## International Exchange
-
-Users can opt into international or cross-cultural meetings.
-
-Profile information could include:
-
-- Languages spoken
-- Languages being learned
-- Cultures they are interested in
-- Things about their own culture they enjoy sharing
-- Time zone availability
-
-Convene can organize structured virtual exchanges.
-
-## AI / Technical Components
-
-Convene should use AI for areas involving fuzzy human preferences while keeping deterministic logic for hard constraints.
-
-### Profile Agent
-
-Transforms onboarding conversation into structured preferences.
-
-### Matching Agent
-
-Evaluates semantic compatibility between people beyond simple shared-interest tags.
-
-### Social Graph / Relationship Agent
-
-Determines whether the user's available social time should be spent on:
-
-- Meeting someone new
-- Strengthening a new connection
-- Reconnecting with an existing friend
-
-### Activity Planning Agent
-
-Determines what the group should actually do.
-
-### Location Agent
-
-For in-person meetings:
-
-- Searches candidate locations
-- Considers travel times
-- Evaluates interests and constraints
-- Chooses a fair meeting point
-
-### Online Experience Agent
-
-Finds suitable:
-
-- Games
-- Watch-party content
-- Activities
-- Shared online events
-
-### Scheduling Engine
-
-Deterministically calculates overlapping availability and creates events.
-
-### Feedback / Learning System
-
-Uses lightweight post-event feedback to update future matching and activity preferences.
-
-## High-Level Architecture
-
-```text
-User
- |
- v
-Onboarding Form
- |
- v
-LLM Profile Agent
- |
- v
-Structured User Profile
- |
- +----------------+
- |                |
- v                v
-Calendar     Social Graph
- |                |
- +-------+--------+
-         |
-         v
-Candidate Generation
- |
- v
-Compatibility Engine
- |
- v
-Group / Friend Selection
- |
- v
-Activity Planner
- |
- +--------+
- |        |
- v        v
-In-Person Online
-Planner   Planner
- |        |
- +---+----+
-     |
-     v
-Scheduling Engine
- |
- v
-Hangout
- |
- v
-Lightweight Feedback
- |
- +----> Updated Profile
-```
-
-## MVP
-
-For HackGT, the MVP can be considerably smaller than the full vision.
-
-### Required
-
-- User onboarding form
-- Short LLM follow-up conversation
-- Structured interest profile generated from onboarding
-- Seeded database of users
-- Weekly availability
-- New-person matching
-- Calendar overlap detection
-- Automatic activity selection
-- One working in-person planning flow
-- One working online planning flow
-- Generated scheduled hangout
-- Friends list
-- Simple post-hangout feedback
-
-### Strong Demo Features
-
-- Social graph visualization
-- Explainable compatibility score
-- Location optimization
-- Controlled-random matching
-- Reconnection with an existing friend
-- "Plan my week" button
-
-### Stretch Features
-
-- Real calendar integration
-- Live venue search
-- Group formation optimization
-- International matching
-- Translation
-- Automated notifications
-- Dynamic relationship-strength model
-- Real-time event discovery
+Calendar integration, configurable planning preferences, online experiences, advanced relationship management and friendship invitation UI, advanced memory learning, and production-scale optimization can be revisited after the demo. Basic friendship-based reconnection priority is part of the target MVP.
