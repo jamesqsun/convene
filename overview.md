@@ -8,11 +8,11 @@ Convene removes the coordination work of meeting people: comparing schedules, ch
 
 This is the agreed target as of September 26, 2026. The pipeline rework is not implemented yet. README.md documents the current running application, IMPLEMENTATION.md tracks the transition, and technical-design.md specifies the new algorithm.
 
-Users create a profile with interests and short answers, provide a city and private phone number, and submit dated availability. For scheduling, availability is the only choice they make. Convene chooses the other people, activity, venue, and exact time.
+Users create an account and complete onboarding with name, age, city/location, private phone number, interests, questions, and short written answers. Keep the original memory-generation process unchanged to create the initial memory sketch. Users then submit dated availability. For scheduling, availability is the only choice they make. Convene chooses the other people, activity, venue, and exact time.
 
 Hangouts are in-person only. Phone numbers provide participant coordination. The MVP assumes people can reach venues within their city.
 
-Remove activity selections/exclusions, budgets, preferred group sizes, tool/platform choices, meeting-mode choices, travel-radius controls, and connection-category choices from the target flow. Online planning and blocking/relationship-consent workflows are outside this hackathon scope. Profile interests remain useful for learning who people are.
+Remove activity selections/exclusions, budgets, preferred group sizes, tool/platform choices, meeting-mode choices, travel-radius controls, and connection-category choices from the target flow. Online planning, blocking, and separate friendship invitations are outside this hackathon scope; mutual per-person feedback is included. Profile interests remain useful for learning who people are.
 
 ## Planning flow
 
@@ -31,13 +31,19 @@ The MVP assigns at most one hangout per person per planning date and one per ava
 
 Count-based selection with a reconnection bonus is a deliberate simplification: it favors larger pools and overdue friendships but may match fewer people than another arrangement. It does not optimize the smallest bucket globally. Without friendship bonuses it reduces to largest-first.
 
-The initial reconnection bonus is zero for the first 14 days since a friend's last completed shared hangout, then grows linearly to +1 per unique friend pair at 60 days. The total bucket bonus is capped at half the participant count. Use explicit mutual friendships (seeded for the demo), with friendship creation time as a fallback if there is no completed meeting history. Scheduled and cancelled plans do not count as meetings. Reconnection also influences final grouping, but is a preference rather than a guarantee; all availability and group-size rules still hold.
+The initial reconnection bonus is zero for the first 14 days since a friend's last completed shared hangout, then grows linearly to +1 per unique friend pair at 60 days. The total bucket bonus is capped at half the participant count. Friendship and bonus eligibility begin only after both people explicitly answer yes about meeting each other again for the same completed hangout. Missing feedback counts as no. Scheduled and cancelled plans do not count as meetings. Reconnection also influences final grouping, but is a preference rather than a guarantee; all availability and group-size rules still hold.
 
 ## User experience
 
 Show when a slot is waiting for its batch, when a plan is assigned, and when no plan was found. Users can edit or pause unassigned slots. Late additions are considered only if a complete event can still meet the 48-hour notice rule. Existing plans stay stable.
 
 Assigned-plan details show the people, activity, venue, time, and private participant phone contacts. Cancellation closes slots rather than immediately creating replacement plans.
+
+After a group hangout, ask Would you want to meet this person again? for each other participant individually. Both must answer yes to become friends automatically; users do not manually add friends. Late answers can establish mutual interest later. Missing feedback prevents creating a friendship but does not erase one already established.
+
+The personal friend graph shows people the user has connected with and distinguishes mutual friendships. Lines fade with time since the last completed shared Convene hangout and brighten after meeting again, while old connections stay visible. Fading does not remove friendship; overdue friends can gain reconnection priority. Do not display others' private feedback or relationships between other users.
+
+The profile displays generated memories rather than making raw answers the main view. Users can Edit or Delete their own memories. No Use less or separate influence attribute is included. Update affected embeddings/derived profile data so corrections are reflected in future planning and deleted memories stop influencing it. Memory generation itself stays the same as the original spec.
 
 ## Implementation boundaries
 

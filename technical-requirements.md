@@ -6,12 +6,18 @@ This document specifies the revised hackathon MVP target. It replaces the earlie
 
 - Mobile-first web app with PWA support.
 - In-person hangouts only, grouped by normalized city. Assume participants can reach a venue in their city.
-- Collect profile interests/answers, city, a private country-code phone number, and dated availability.
+- Provide account creation and resumable onboarding collecting name, age, city/location, a private country-code phone number, interests, questions, and short written answers for the initial memory sketch, plus dated availability.
 - Scheduling input is availability only. Convene selects company, activity, venue, and time.
 - Remove activity selections and exclusions, budget selection, preferred group sizes, tool/platform selection, online/in-person selection, travel-radius controls, and connection-category selection from the revised UI and API contract.
 - Phone is the sole participant coordination method. Do not require messaging-app identifiers or select a communication platform.
-- Blocking and relationship-consent workflows are outside this hackathon MVP. Authentication and private-data access controls remain required.
+- Blocking and separate friendship invitation/acceptance workflows are outside this hackathon MVP; mutual per-person feedback is included. Authentication and private-data access controls remain required.
 - Preserve profile interests and preference memories for embedding similarity and LLM activity reasoning.
+- Keep the original memory-generation process, evidence validation, structure, and embedding derivation unchanged. This revision adds presentation and user corrections, not new extraction rules.
+- Display generated memories as the primary profile content, with owner-only Edit and Delete. No Use less, devalue control, or influence attribute. Refresh affected embeddings/derived profiles and invalidate stale representations after changes; deleted memories must stop contributing to planning. Normal profile reads must not regenerate old answers into deleted memories or overwrite edits.
+- Ask Would you want to meet this person again? separately for each other participant after a completed non-cancelled group hangout. Store private directional feedback uniquely by event/author/subject and validate participation.
+- Treat missing feedback as no for friendship creation. Only mutual explicit yes answers for the same completed event create a unique unordered friendship and enable reconnection priority; late answers can complete the pair. Creation must be atomic/idempotent under concurrent submissions.
+- Remove manual Add friend controls. Demo friends must have seeded completed-event and mutual-feedback provenance. Missing later feedback does not delete an established friendship; no additional friendship-removal workflow is added here.
+- Show the owner's previously connected people in a personal graph, distinguish mutual friends, and fade lines with time since the last completed shared Convene hangout. Keep old connections visible; a new completed meeting brightens the line. Visual fading does not remove friendship or disable its reconnection bonus. Do not expose private responses or relationships between third parties.
 
 ## 2. Scheduling contract
 
@@ -34,7 +40,7 @@ This document specifies the revised hackathon MVP target. It replaces the earlie
 - Score candidates by distinct people count plus a capped reconnection bonus. Select the highest score; break ties by larger count, longest common window, earliest start, then stable IDs.
 - For each unique unordered mutual friend pair, use pair_bonus = clamp((days_since_last_meeting - 14) / 46, 0, 1). Initial defaults are zero through 14 days and +1 at 60 days; they are tunable.
 - Add min(sum(pair_bonuses), 0.5 * people_count) to the bucket count. With no bonuses this reduces to largest-first. Recompute unique pairs, bonuses, and the cap whenever people are removed.
-- Use explicit mutual friendship records (seeded records suffice for the demo), not the current directional saved-friend list. Measure elapsed days at a persisted batch scoring timestamp from the latest completed, non-cancelled shared event end, falling back to friendship creation time. Missing/invalid timestamps give zero bonus. Scheduled/cancelled events do not reset recency; completed group events update every participating friend pair. This is a proxy based on recorded history, not knowledge of meetings outside Convene.
+- Use friendship records derived from mutual per-person yes feedback, not manual additions or the directional saved-friend list. Without both yes answers, reconnection bonus is zero. Measure elapsed days at a persisted batch scoring timestamp from the latest completed, non-cancelled shared event end, falling back to friendship creation time only for legacy history gaps (never to bypass mutual-feedback eligibility). Missing/invalid timestamps give zero bonus. Scheduled/cancelled events do not reset recency; completed group events update every participating friend pair. This is a proxy based on recorded history, not knowledge of meetings outside Convene.
 - Remove selected people from all other candidates for that planning date, recompute membership/windows, discard candidates below two, and repeat.
 - Buckets have no maximum size. They are provisional pools for the next selection stage.
 - Enforce one assigned event per user per city-local planning date and one event per source slot. Final reservation checks also prevent conflicts across dates/batches.
@@ -90,6 +96,8 @@ Never expose service-role/provider secrets in browser bundles. Validate authenti
 Acceptance coverage must include exact 60-minute boundaries, non-round starts, singleton removal after deduplication, multiple slots for one user, stable ties, uncovered users, group remainders, local-day boundaries/DST, late arrivals, 48-hour checks on retries, stale edits, concurrent commits, rollback, and notification deduplication. Verify removed choices are absent from UI and input contracts. Hosted scheduler and external-provider verification remain separate from local tests.
 
 Verify reconnection boundaries (14/37/60 days), unordered-pair deduplication, the 50% bucket cap, recalculation after member removal, mutual friendship eligibility, completed-event history and creation-time fallback, retry snapshot stability, and influence on final groups without overriding hard constraints.
+
+Verify unchanged memory generation, generated-memory display, owner-only Edit/Delete and derived-data refresh; per-person feedback participation, missing-as-no, late/concurrent mutual yes and idempotent friendship creation; removal of manual additions; private personal graph data and recency fading without friendship deletion.
 
 ## 8. Deferred work
 

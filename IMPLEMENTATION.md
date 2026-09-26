@@ -7,13 +7,17 @@ This is the working implementation tracker. Checked items are implemented; exter
 The September 26 target in technical-design.md and technical-requirements.md supersedes the earlier product scope. Existing checked items below describe the current/previous implementation, not completion of the rework.
 
 - [ ] Remove scheduling activity selections/exclusions, budget, group-size, platform/tool, meeting-mode, travel-radius, and connection-category controls from UI and input contracts; retain onboarding interests and answers.
-- [ ] Replace multi-app contact setup with private phone-only participant coordination; remove online planning and blocking/relationship-consent workflows from the revised demo scope.
+- [ ] Replace multi-app contact setup with private phone-only participant coordination; remove online planning, blocking, and separate friendship invitation workflows from the revised demo scope; retain mutual per-person feedback.
 - [ ] Define a migration for existing data and disable immediate pair matching when the batch pipeline is enabled.
 - [ ] Add normalized city/time-zone partitioning, daily local-date batches, late-arrival handling, and durable retry recovery.
 - [ ] Enforce at least 48 elapsed hours' notice at final booking, including retries and DST boundaries.
 - [ ] Generate buckets at submitted/clipped start boundaries with a 60-minute minimum; preserve full common windows.
 - [ ] Select buckets by people count plus capped reconnection bonus with stable tie-breaking; recompute membership, pairs, scores, and windows after removals and discard counts below two.
-- [ ] Add explicit mutual friendship records/seed data and completed shared-event recency, with creation-time fallback and a stable per-pass history snapshot.
+- [ ] Add per-person group feedback; treat missing as no and create a unique friendship only after mutual explicit yes for the same completed event. Remove manual friend addition and seed demo friends through completed events/mutual feedback.
+- [ ] Use feedback-derived friendships and completed shared-event recency for reconnection, with a stable per-pass history snapshot and creation-time fallback only for legacy history gaps.
+- [ ] Add the personal connection graph with friendship indicators and lines that fade/brighten by shared-event recency without deleting established friendships or exposing private responses.
+- [ ] Complete account creation/resumable onboarding for name, age, location, phone, interests, and written answers while preserving original memory generation.
+- [ ] Show generated memories in profile with owner-only Edit/Delete; refresh affected embeddings/derived profile data. Do not add influence attributes or Use less controls.
 - [ ] Apply initial 14-to-60-day pair bonus ramp (0 to 1), cap total bucket bonus at 50% of participant count, and verify pair deduplication and score boundaries.
 - [ ] Enforce one event per person/planning date and per slot, including multiple-slot and cross-midnight deduplication.
 - [ ] Partition buckets using normalized profile similarity plus reconnection priority into groups of 2–10 without singletons; recalculate member rankings and final group windows.
