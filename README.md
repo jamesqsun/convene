@@ -45,9 +45,23 @@ All seeded people and venues are fictional. In connected mode, in-person matchin
 
 ### 1. Create your Supabase project
 
-Create a Supabase project, then apply the migrations in filename order: [initial schema](supabase/migrations/202609240001_initial.sql), followed by [automatic slots](supabase/migrations/202609240002_automatic_slots.sql). Use the SQL editor or your normal Supabase CLI migration workflow. Existing installations need only the second migration; do not rerun the initial migration.
+Create a Supabase project, then apply the migrations in filename order: [initial schema](supabase/migrations/202609240001_initial.sql), [automatic slots](supabase/migrations/202609240002_automatic_slots.sql), and [overlap protection](supabase/migrations/202609240003_availability_no_overlap.sql). Use the SQL editor or your normal Supabase CLI migration workflow. Existing installations should apply only migrations they have not already run.
 
 The second migration adds slot lifecycle/preferences, a partial GiST overlap index, a spatial point index, and a private durable job queue. Existing real users' slots start **paused**, because the previous build did not authorize automatic assignment; reopen them in Availability to opt in. New slots start pending.
+
+The third migration prevents one user's pending, paused, or filled slots from overlapping, including concurrent inserts, edits, and reopening. Adjacent endpoints are allowed (3–5 pm and 5–8 pm); different users can offer the same time. Cancelled and expired slots do not block new slots. The app displays a conflict message without saving the attempted change.
+
+If overlapping slots already exist, the migration stops without changing them. Find the conflicting pairs with this read-only SQL, edit/remove unassigned slots in Availability, or deliberately cancel an assigned plan if that is the conflict you want to remove. Then rerun the migration. If the SQL editor reports an aborted transaction, run `ROLLBACK;` first.
+
+```sql
+select a.user_id, a.id as first_slot, b.id as second_slot,
+       a.start_time, a.end_time, b.start_time as other_start, b.end_time as other_end
+from public.availability_blocks a
+join public.availability_blocks b
+  on a.user_id = b.user_id and a.id < b.id and a.during && b.during
+where a.status in ('pending', 'paused', 'filled')
+  and b.status in ('pending', 'paused', 'filled');
+```
 
 The migration creates user profiles, private preference memories, availability, directional connections, hangouts, participants, reservation ranges, and feedback. It enables RLS, restricts direct client access, and creates server-only transaction functions for profile updates, scheduling, and feedback.
 

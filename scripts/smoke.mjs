@@ -73,6 +73,32 @@ assert.equal(
 );
 const slot = result.body.availability.find((s) => s.hangoutId === plans[0].id);
 assert.equal(slot.status, "filled");
+const duplicateSlot = await a("/api/action", {
+  action: "availability",
+  block: { start: start.toISOString(), end: end.toISOString(), mode: "online" },
+});
+assert.equal(duplicateSlot.response.status, 409);
+assert.equal(duplicateSlot.body.code, "availability_overlap");
+const adjacentSlot = await a("/api/action", {
+  action: "availability",
+  block: {
+    start: end.toISOString(),
+    end: new Date(end.getTime() + 3600000).toISOString(),
+    mode: "either",
+    goals: ["friends"],
+  },
+});
+assert.equal(adjacentSlot.response.status, 200);
+const adjacent = adjacentSlot.body.state.availability.find(
+  (s) => s.start === end.toISOString(),
+);
+const overlappingEdit = await a("/api/action", {
+  action: "edit_availability",
+  id: adjacent.id,
+  block: { start: start.toISOString(), end: end.toISOString(), mode: "either" },
+});
+assert.equal(overlappingEdit.response.status, 409);
+assert.equal(overlappingEdit.body.code, "availability_overlap");
 await Promise.all([a("/api/state"), a("/api/state")]);
 result = await a("/api/state");
 assert.equal(

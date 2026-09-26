@@ -201,6 +201,29 @@ export class AppError extends Error {
     super(message);
   }
 }
+
+export function assertAvailabilityDoesNotOverlap(
+  slots: Availability[],
+  userId: string,
+  proposed: { start: string; end: string },
+  excludeId?: string,
+) {
+  if (
+    slots.some(
+      (slot) =>
+        slot.userId === userId &&
+        slot.id !== excludeId &&
+        ["pending", "paused", "filled"].includes(slot.status ?? "pending") &&
+        Date.parse(slot.start) < Date.parse(proposed.end) &&
+        Date.parse(proposed.start) < Date.parse(slot.end),
+    )
+  )
+    throw new AppError(
+      "availability_overlap",
+      "This time overlaps another availability slot. Edit that slot or choose a different time.",
+      409,
+    );
+}
 export function publicPerson(person: Person): PublicPerson {
   return {
     id: person.id,

@@ -437,6 +437,89 @@ test("automatic-slot migration, durable queue, and atomic assignment", async (t)
         await pg.exec("reset role");
       },
     );
+    await t.test(
+      "overlap migration preserves existing conflicts and guards create, edit, and reopen",
+      async () => {
+        const migration = await readFile(
+          "supabase/migrations/202609240003_availability_no_overlap.sql",
+          "utf8",
+        );
+        const duplicate = crypto.randomUUID();
+        await pg.query(
+          "insert into availability_blocks(id,user_id,start_time,end_time,mode,status) values($1,$2,$3,$4,'online','paused')",
+          [duplicate, alice, start, end],
+        );
+        await assert.rejects(
+          pg.exec(migration),
+          /resolve existing overlapping/,
+        );
+        await pg.exec("rollback");
+        assert.equal(
+          (
+            await pg.query("select id from availability_blocks where id=$1", [
+              duplicate,
+            ])
+          ).rows.length,
+          1,
+        );
+        await pg.query("delete from availability_blocks where id=$1", [
+          duplicate,
+        ]);
+        await pg.exec(migration);
+        await assert.rejects(
+          pg.query(
+            "insert into availability_blocks(user_id,start_time,end_time,mode) values($1,$2,$3,'online')",
+            [alice, start, end],
+          ),
+          /availability_no_overlap/,
+        );
+        const adjacent = crypto.randomUUID();
+        const later = new Date(Date.parse(end) + 3600000).toISOString();
+        await pg.query(
+          "insert into availability_blocks(id,user_id,start_time,end_time,mode,status) values($1,$2,$3,$4,'online','paused')",
+          [adjacent, alice, end, later],
+        );
+        await assert.rejects(
+          pg.query("select update_convene_slot($1,$2,'paused',$3)", [
+            alice,
+            adjacent,
+            JSON.stringify({
+              start,
+              end,
+              mode: "either",
+              interests: [],
+              goals: [],
+            }),
+          ]),
+          /availability_no_overlap/,
+        );
+        assert.equal(
+          (
+            await pg.query<{ unchanged: boolean }>(
+              "select start_time=$2::timestamptz as unchanged from availability_blocks where id=$1",
+              [adjacent, end],
+            )
+          ).rows[0].unchanged,
+          true,
+        );
+        await pg.query(
+          "insert into availability_blocks(id,user_id,start_time,end_time,mode,status) values($1,$2,$3,$4,'either','cancelled')",
+          [duplicate, alice, start, end],
+        );
+        await assert.rejects(
+          pg.query("select update_convene_slot($1,$2,'pending',null)", [
+            alice,
+            duplicate,
+          ]),
+          /availability_no_overlap/,
+        );
+        // Another user can still offer exactly the same window.
+        await pg.query("select update_convene_slot($1,$2,'pending',null)", [
+          bob,
+          b,
+        ]);
+      },
+    );
   } finally {
     await pg.close();
   }

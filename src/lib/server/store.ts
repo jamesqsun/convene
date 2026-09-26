@@ -47,6 +47,12 @@ export async function identity() {
 }
 export function dbError(error: { message: string; code?: string } | null) {
   if (!error) return;
+  if (error.message.includes("availability_no_overlap"))
+    throw new AppError(
+      "availability_overlap",
+      "This time overlaps another availability slot. Edit that slot or choose a different time.",
+      409,
+    );
   if (error.message.includes("schedule_conflict"))
     throw new AppError(
       "schedule_conflict",
@@ -195,9 +201,7 @@ export function slotFromRow(r: Record<string, any>): Availability {
 
 // Only the indexed overlap page and its participants enter the matching engine.
 async function readPages(
-  query: (
-    offset: number,
-  ) => PromiseLike<{
+  query: (offset: number) => PromiseLike<{
     data: any[] | null;
     error: { message: string; code?: string } | null;
     count?: number | null;

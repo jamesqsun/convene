@@ -1,5 +1,11 @@
 import "server-only";
-import { AppError, type Action, type Data, type Memory } from "../domain";
+import {
+  AppError,
+  assertAvailabilityDoesNotOverlap,
+  type Action,
+  type Data,
+  type Memory,
+} from "../domain";
 import { fillPendingSlots } from "../planner";
 import { understand } from "./ai";
 import { adminClient } from "./supabase";
@@ -94,6 +100,12 @@ async function mutate(
           "Only waiting or paused slots can be edited.",
           409,
         );
+      assertAvailabilityDoesNotOverlap(
+        data.availability,
+        userId,
+        action.block,
+        slot.id,
+      );
       if (db)
         dbError(
           (
@@ -111,6 +123,7 @@ async function mutate(
         });
       return;
     }
+    assertAvailabilityDoesNotOverlap(data.availability, userId, action.block);
     const block = {
       ...action.block,
       id: crypto.randomUUID(),
@@ -150,6 +163,13 @@ async function mutate(
       action.action === "remove_availability" ? "cancelled" : action.status;
     if (status !== "cancelled" && Date.parse(slot.end) <= Date.now())
       throw new AppError("past_availability", "This slot has expired.");
+    if (status !== "cancelled")
+      assertAvailabilityDoesNotOverlap(
+        data.availability,
+        userId,
+        slot,
+        slot.id,
+      );
     if (db)
       dbError(
         (
