@@ -14,6 +14,27 @@ export const interests = [
 ] as const;
 export const modeSchema = z.enum(["in_person", "online", "either"]);
 export type Mode = z.infer<typeof modeSchema>;
+export const communicationPlatforms = [
+  "Phone",
+  "Discord",
+  "WhatsApp",
+  "Instagram",
+  "Telegram",
+] as const;
+export type CommunicationPlatform = (typeof communicationPlatforms)[number];
+export const phoneSchema = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/[\s().-]/g, ""))
+  .pipe(
+    z
+      .string()
+      .regex(
+        /^\+[1-9]\d{7,14}$/,
+        "Enter a phone number with country code, for example +1 202 555 0123.",
+      ),
+  );
+const handleSchema = z.string().trim().max(100);
 export const profileSchema = z
   .object({
     name: z.string().trim().min(1).max(50),
@@ -40,13 +61,58 @@ export const profileSchema = z
       .nullable()
       .optional(),
     novelty: z.number().min(0).max(100),
-    platforms: z.array(z.enum(["Discord", "Browser", "PC", "Switch"])).max(4),
+    phone: phoneSchema,
+    platforms: z
+      .array(z.enum(communicationPlatforms))
+      .min(1, "Select at least one way to communicate.")
+      .max(5),
+    handles: z
+      .object({
+        Discord: handleSchema.optional(),
+        WhatsApp: handleSchema.optional(),
+        Instagram: handleSchema.optional(),
+        Telegram: handleSchema.optional(),
+      })
+      .default({}),
     excludedInterests: z.array(z.enum(interests)).max(10),
   })
   .refine(
     (p) => !p.interests.some((i) => p.excludedInterests.includes(i)),
     "An interest cannot also be excluded",
-  );
+  )
+  .superRefine((p, ctx) => {
+    for (const platform of p.platforms) {
+      if (platform === "Phone") continue;
+      const value = p.handles[platform] ?? "";
+      if (
+        platform === "WhatsApp"
+          ? !phoneSchema.safeParse(value).success
+          : !/^@?[A-Za-z0-9_.#-]{1,100}$/.test(value)
+      )
+        ctx.addIssue({
+          code: "custom",
+          path: ["handles", platform],
+          message:
+            platform === "WhatsApp"
+              ? "Enter your WhatsApp number with country code."
+              : `Enter your ${platform} username, not a profile URL.`,
+        });
+    }
+  })
+  .transform((p) => ({
+    ...p,
+    platforms: [...new Set(p.platforms)],
+    handles: Object.fromEntries(
+      p.platforms
+        .filter((v) => v !== "Phone")
+        .map((v) => [
+          v,
+          v === "WhatsApp"
+            ? phoneSchema.parse(p.handles[v])
+            : p.handles[v]!.replace(/^@/, ""),
+        ]),
+    ) as typeof p.handles,
+  }));
 export type Profile = z.infer<typeof profileSchema>;
 export type Memory = {
   id: string;
@@ -89,7 +155,7 @@ export type Activity = {
   mode: "in_person" | "online";
   minutes: number;
   cost: number;
-  platform?: string;
+  tool?: string;
   venue?: { name: string; area: string; city: string };
   color: string;
 };
@@ -104,6 +170,7 @@ export type Hangout = {
   score: number;
   seededVenue: boolean;
   slotIds?: string[];
+  communicationPlatform?: CommunicationPlatform | null;
 };
 export type Feedback = {
   id: string;
@@ -136,6 +203,14 @@ export type AppState = {
   hangouts: Hangout[];
   feedback: Feedback[];
   aiAvailable: boolean;
+  planContacts: PlanContact[];
+};
+export type PlanContact = {
+  hangoutId: string;
+  userId: string;
+  platform: CommunicationPlatform;
+  value: string;
+  seeded: boolean;
 };
 
 export const availabilityInput = z

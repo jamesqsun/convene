@@ -23,6 +23,7 @@ function fixture(): Data {
     profile: {
       ...defaultProfile,
       name: "Test",
+      phone: "+12025550123",
       interests: ["Coffee", "Board games", "Music"],
     },
     summary: "Test",
@@ -108,7 +109,7 @@ test("online-only availability cannot produce an in-person plan", () => {
     false,
   );
 });
-test("required online platform and budgets are hard filters", () => {
+test("shared communication and budgets are hard filters", () => {
   const data = fixture();
   const me = data.people.find((p) => p.id === userId)!;
   me.profile.platforms = [];

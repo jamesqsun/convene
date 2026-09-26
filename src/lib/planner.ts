@@ -1,4 +1,5 @@
 import { activities } from "./catalog";
+import { sharedCommunication } from "./contacts";
 import {
   AppError,
   type Activity,
@@ -50,8 +51,6 @@ function validActivity(
         allows(p.profile.mode, activity.mode) &&
         !p.profile.excludedInterests.includes(activity.interest) &&
         p.profile.budget >= activity.cost &&
-        (!activity.platform ||
-          p.profile.platforms.includes(activity.platform as "Discord")) &&
         // Catalog eligibility is separate from private-coordinate radius checks.
         // Fictional venues do not provide a travel-time guarantee.
         (activity.mode === "online" ||
@@ -141,6 +140,7 @@ export function plan(
   }[] = [];
   for (const person of data.people) {
     if (person.id === userId) continue;
+    if (!sharedCommunication(me.profile, person.profile)) continue;
     const relations = data.connections.filter(
       (c) =>
         (c.userId === userId && c.otherId === person.id) ||
@@ -271,6 +271,10 @@ export function plan(
     score: Math.round(chosen.score * 100),
     seededVenue: chosen.activity.mode === "in_person",
     slotIds: chosen.slotIds,
+    communicationPlatform: sharedCommunication(
+      me.profile,
+      chosen.person.profile,
+    ),
     reason: `You both enjoy ${chosen.shared.slice(0, 3).join(", ").toLowerCase()}, and have ${chosen.activity.minutes} minutes free together. This ${chosen.activity.mode === "online" ? "online session" : "activity"} fits both of your budgets and activity preferences.`,
   };
 }

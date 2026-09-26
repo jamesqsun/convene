@@ -63,7 +63,7 @@ export const activities: Activity[] = [
     mode: "online",
     minutes: 90,
     cost: 0,
-    platform: "Discord",
+    tool: "Choose a co-op game together",
     color: "lavender",
   },
   {
@@ -73,7 +73,7 @@ export const activities: Activity[] = [
     mode: "online",
     minutes: 60,
     cost: 0,
-    platform: "Discord",
+    tool: "Your preferred music service",
     color: "peach",
   },
   {
@@ -83,7 +83,7 @@ export const activities: Activity[] = [
     mode: "online",
     minutes: 60,
     cost: 0,
-    platform: "Browser",
+    tool: "Your study materials",
     color: "sage",
   },
   {
@@ -93,7 +93,7 @@ export const activities: Activity[] = [
     mode: "online",
     minutes: 90,
     cost: 0,
-    platform: "Discord",
+    tool: "Your preferred coding tools",
     color: "sage",
   },
   {
@@ -103,7 +103,7 @@ export const activities: Activity[] = [
     mode: "online",
     minutes: 60,
     cost: 0,
-    platform: "Browser",
+    tool: "Bring a book to discuss",
     color: "peach",
   },
   {
@@ -113,7 +113,7 @@ export const activities: Activity[] = [
     mode: "online",
     minutes: 60,
     cost: 0,
-    platform: "Browser",
+    tool: "Browser-based board games",
     color: "lavender",
   },
 ];
@@ -128,7 +128,9 @@ export const defaultProfile: Profile = {
   budget: 25,
   radiusKm: 10,
   novelty: 45,
-  platforms: ["Discord", "Browser"],
+  phone: "",
+  platforms: ["Phone"],
+  handles: {},
   excludedInterests: [],
 };
 const seeds: [string, Profile["interests"], string][] = [
@@ -190,6 +192,14 @@ export function seedPeople(): Person[] {
       ...defaultProfile,
       location: { latitude: 33.783, longitude: -84.383 },
       name,
+      phone: `+120255501${String(i + 10).padStart(2, "0")}`,
+      platforms: ["Phone", "Discord", "WhatsApp", "Instagram", "Telegram"],
+      handles: {
+        Discord: `convene_demo_${i + 1}`,
+        WhatsApp: `+120255501${String(i + 10).padStart(2, "0")}`,
+        Instagram: `convene_demo_${i + 1}`,
+        Telegram: `convene_demo_${i + 1}`,
+      },
       interests,
       about: summary,
       novelty: 30 + i * 5,

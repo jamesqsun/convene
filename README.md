@@ -31,6 +31,7 @@ The default `CONVENE_MODE=demo` provides an isolated demo session. It never call
 ### Try the complete loop
 
 1. Click **Let's get to know you**, add your name, choose interests, answer the two conversational prompts, and save your preferences.
+   Add your phone number with its country code. Select communication platforms and enter the requested username or number for each one. For demo testing, use fictional details such as `+1 202 555 0123` and `convene_test_user`.
 2. Add a dated availability block. For a reliable seeded demo, choose a time inside **13:00–23:00 UTC** in the next 14 days, with at least 90 minutes free. Times in the UI are shown and entered in your browser's local timezone.
 3. Leave the slot preferences on **Surprise me**, or select any activities, meeting options, and company preferences that work. Save it; no separate planning action is needed. The slot shows **Waiting for a match** or **Plan assigned**.
 4. See the resulting plan in **My plans**, including its time, person, activity, and explanation. Open its details to cancel it.
@@ -39,13 +40,25 @@ The default `CONVENE_MODE=demo` provides an isolated demo session. It never call
 7. Open **My profile** to inspect private preference memories or edit onboarding answers.
 8. Edit or pause waiting slots in **Availability**. Cancel an assigned plan from its details. Cancellation closes both participating slots; use **Reopen** only when you want another match. Each slot receives one event, even if time remains in its window.
 
-All seeded people and venues are fictional. In connected mode, in-person matching requires a private location saved in **My profile** and enforces both users' straight-line distance limits to one another and the approximate Midtown Atlanta venue area. This does not verify actual venues, opening hours, driving distance, or reservations. Demo mode uses a city-only simulation. Users elsewhere can use online plans, which do not require location and do not create meeting rooms or share handles.
+### Contact details and communication
+
+Profiles require a phone number and at least one communication method: **Phone / SMS, Discord, WhatsApp, Instagram, or Telegram**. Selecting an app reveals its required identifier field. WhatsApp uses a phone number with country code (which may differ from the main number); Discord, Instagram, and Telegram use usernames. These fields check format, not account ownership; SMS verification and platform OAuth are not implemented.
+
+Matching selects a common enabled method with valid identifiers, preferring a shared app over Phone / SMS. This applies to in-person plans too, so participants can coordinate. Phones are not an automatic fallback if Phone / SMS was deselected. Browser/game/tool requirements are separate from communication apps.
+
+The chosen contact appears under **How to reach…** in assigned-plan details. Contacts are stored in the owner-only profile JSON, never public person cards, AI preference input, or embeddings. Only participants receive the chosen method's identifier; the other saved identifiers stay private. Cancelled plans and blocked/declined relationships suppress contact display. Removing a selected method also stops its future display; previously copied details cannot be recalled. Completed, non-cancelled plans retain access while both participants still enable the chosen method. Seeded contacts are explicitly fictional and must not be contacted.
+
+Existing users should edit their profile to add contact details before creating new matches. Old Browser/PC/Switch selections are not treated as communication channels; no username or number is guessed. Existing plans without a saved communication channel can show a currently shared method after both profiles have been completed.
+
+All seeded people and venues are fictional. In connected mode, in-person matching requires a private location saved in **My profile** and enforces both users' straight-line distance limits to one another and the approximate Midtown Atlanta venue area. This does not verify actual venues, opening hours, driving distance, or reservations. Demo mode uses a city-only simulation. Users elsewhere can use online plans, which do not require location. Participants receive the selected contact method in plan details and arrange their own room or call.
 
 ## Connect Supabase and OpenAI
 
 ### 1. Create your Supabase project
 
-Create a Supabase project, then apply the migrations in filename order: [initial schema](supabase/migrations/202609240001_initial.sql), [automatic slots](supabase/migrations/202609240002_automatic_slots.sql), and [overlap protection](supabase/migrations/202609240003_availability_no_overlap.sql). Use the SQL editor or your normal Supabase CLI migration workflow. Existing installations should apply only migrations they have not already run.
+Create a Supabase project, then apply the migrations in filename order: [initial schema](supabase/migrations/202609240001_initial.sql), [automatic slots](supabase/migrations/202609240002_automatic_slots.sql), [overlap protection](supabase/migrations/202609240003_availability_no_overlap.sql), and [communication contacts](supabase/migrations/202609240004_communication_contacts.sql). Use the SQL editor or your normal Supabase CLI migration workflow. Existing installations should apply only migrations they have not already run.
+
+The fourth migration records each plan's communication channel and verifies both participants have enabled it and supplied identifiers before booking. Phone numbers and usernames use the existing private profile storage; no separate contact service or credential is needed. Re-run the seed script if you want the existing fictional pool to receive demo contact details (it also refreshes its availability as described below).
 
 The second migration adds slot lifecycle/preferences, a partial GiST overlap index, a spatial point index, and a private durable job queue. Existing real users' slots start **paused**, because the previous build did not authorize automatic assignment; reopen them in Availability to opt in. New slots start pending.
 

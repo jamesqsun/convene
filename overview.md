@@ -56,6 +56,12 @@ Use “select all that apply” for interests, activities, acceptable meeting mo
 
 ## Onboarding and Interest Profile
 
+### Contact information and communication platforms
+
+Collect a phone number with country code during onboarding. Communication platforms are a multi-select choice: Phone / SMS, Discord, WhatsApp, Instagram, and Telegram. Selecting a platform reveals the required username/handle or WhatsApp number field; do not confuse messaging apps with devices such as PC/Switch or activity tools such as a browser.
+
+Each assigned event must have a usable communication method that both participants explicitly selected. Show only that method's contact details in participant-only plan details, never in public profiles or AI preference prompts. A stored phone number is shared only when Phone / SMS is the chosen enabled method (or the user supplied it separately for WhatsApp). Cancelled or blocked/declined matches lose further contact display. Phone/handle ownership verification is future work; communicate that entries are user-provided.
+
 Onboarding should combine a structured form with an LLM conversation.
 
 ### Initial Form

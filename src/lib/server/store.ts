@@ -9,6 +9,7 @@ import {
   publicPerson,
 } from "../domain";
 import { seedData } from "../catalog";
+import { planContactsFor } from "../contacts";
 import { appMode } from "./config";
 import { adminClient, authClient } from "./supabase";
 
@@ -87,7 +88,16 @@ export async function loadData(
   const db = adminClient();
   const [participation, ownedConnections] = await Promise.all([
     db.from("hangout_participants").select("hangout_id").eq("user_id", userId),
-    db.from("connections").select("*").eq("user_id", userId),
+    // Read every direction/page: an omitted block must never reveal contacts.
+    readPages((offset) =>
+      db
+        .from("connections")
+        .select("*", { count: "exact" })
+        .or(`user_id.eq.${userId},other_id.eq.${userId}`)
+        .order("user_id")
+        .order("other_id")
+        .range(offset, offset + 499),
+    ),
   ]);
   dbError(participation.error);
   dbError(ownedConnections.error);
@@ -172,6 +182,7 @@ export async function loadData(
       reason: r.reason,
       score: r.score,
       seededVenue: r.seeded_venue,
+      communicationPlatform: r.communication_platform,
     })),
     feedback: (feedback.data ?? []).map((r) => ({
       id: r.id,
@@ -307,6 +318,7 @@ export async function loadMatchingData(slots: Availability[]): Promise<Data> {
       reason: r.reason,
       score: r.score,
       seededVenue: r.seeded_venue,
+      communicationPlatform: r.communication_platform,
     })),
     feedback: (feedback.data ?? []).map((r) => ({
       id: r.id,
@@ -346,5 +358,6 @@ export function toState(
     hangouts,
     feedback: data.feedback.filter((f) => f.userId === userId),
     aiAvailable: mode === "supabase" && !!process.env.OPENAI_API_KEY,
+    planContacts: planContactsFor(data, userId),
   };
 }

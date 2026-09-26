@@ -41,7 +41,9 @@ const profile = {
   budget: 25,
   radiusKm: 10,
   novelty: 45,
-  platforms: ["Discord", "Browser"],
+  phone: "+12025550123",
+  platforms: ["Discord", "WhatsApp"],
+  handles: { Discord: "convene_smoke_test", WhatsApp: "+12025550123" },
   excludedInterests: [],
 };
 result = await a("/api/action", { action: "profile", profile });
@@ -73,6 +75,12 @@ assert.equal(
 );
 const slot = result.body.availability.find((s) => s.hangoutId === plans[0].id);
 assert.equal(slot.status, "filled");
+assert.ok(
+  result.body.planContacts.some(
+    (c) => c.hangoutId === plans[0].id && c.platform === "Discord",
+  ),
+);
+assert.ok(!JSON.stringify(result.body.people).includes("phone"));
 const duplicateSlot = await a("/api/action", {
   action: "availability",
   block: { start: start.toISOString(), end: end.toISOString(), mode: "online" },
@@ -154,6 +162,9 @@ result = await a("/api/action", {
 assert.equal(result.response.status, 409);
 result = await a("/api/action", { action: "cancel", id: plans[0].id });
 assert.equal(result.response.status, 200);
+assert.ok(
+  !result.body.state.planContacts.some((c) => c.hangoutId === plans[0].id),
+);
 assert.equal(
   result.body.state.availability.find((s) => s.id === slot.id).status,
   "cancelled",

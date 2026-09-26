@@ -15,6 +15,7 @@ const start = new Date(now + 86400000).toISOString();
 const end = new Date(now + 86400000 + 5 * 3600000).toISOString();
 const profile = {
   ...defaultProfile,
+  phone: "+12025550123",
   interests: ["Coffee", "Board games"] as typeof defaultProfile.interests,
 };
 function fixture(): Data {
@@ -518,6 +519,60 @@ test("automatic-slot migration, durable queue, and atomic assignment", async (t)
           bob,
           b,
         ]);
+      },
+    );
+    await t.test(
+      "communication channel is validated and persisted, with private profile RLS",
+      async () => {
+        await pg.exec(
+          await readFile(
+            "supabase/migrations/202609240004_communication_contacts.sql",
+            "utf8",
+          ),
+        );
+        const current = (
+          await pg.query<{ id: string; revision: number }>(
+            "select id,revision from availability_blocks where id in ($1,$2) order by id",
+            [a, b],
+          )
+        ).rows;
+        const assign = (channel?: string) =>
+          pg.query("select schedule_convene_slots($1,$2,$3,$4)", [
+            alice,
+            JSON.stringify({
+              ...h,
+              id: crypto.randomUUID(),
+              communicationPlatform: channel,
+            }),
+            JSON.stringify(current),
+            profiles,
+          ]);
+        await assert.rejects(assign(), /schedule_conflict/);
+        await assert.rejects(assign("Discord"), /schedule_conflict/);
+        await pg.exec("set role service_role");
+        await assign("Phone");
+        await pg.exec("reset role");
+        assert.equal(
+          (
+            await pg.query<{ communication_platform: string }>(
+              "select communication_platform from hangouts where status='scheduled'",
+            )
+          ).rows[0].communication_platform,
+          "Phone",
+        );
+        await pg.exec("set role authenticated");
+        await pg.query("select set_config('request.jwt.claim.sub',$1,false)", [
+          alice,
+        ]);
+        assert.equal(
+          (
+            await pg.query("select profile->>'phone' from users where id=$1", [
+              bob,
+            ])
+          ).rows.length,
+          0,
+        );
+        await pg.exec("reset role");
       },
     );
   } finally {

@@ -6,6 +6,10 @@ This document lists the infrastructure, databases, APIs, credentials, and extern
 
 ### Core scheduling and input requirements
 
+- Collect a required country-code phone number and multi-select communication platforms (Phone / SMS, Discord, WhatsApp, Instagram, Telegram). Require an identifier for every selected app; WhatsApp requires its own number, while other apps require usernames. Normalize numbers and discard deselected app identifiers on profile save.
+- Persist contact data in private owner-readable storage, separate from public representations and LLM inputs. Select and persist a shared enabled communication channel on each event. Revalidate its availability within the scheduling transaction; do not match incomplete legacy contact profiles by assuming identifiers.
+- Reveal only the selected channel's contact details to assigned participants through authenticated server responses. Suppress contacts for cancelled events and blocked/declined relationships in either direction. Do not expose all contacts through connection cards. Removing a method revokes future display, not copies already received. Verification by SMS or provider OAuth is not part of this implementation.
+
 - Saving availability must start automatic matching; no user-facing plan-generation button is required. Pending slots wait for compatible overlapping slots, including ones created later while the original user is offline.
 - Use Supabase to persist slot lifecycle, per-slot preferences, event links, and durable matching work. Provide a server-side worker/job runner plus a scheduled recovery sweep; browser polling alone is insufficient. Secure worker endpoints and deduplicate retries.
 - Persist slot changes and enqueue matching work atomically through a database-backed queue or transactional outbox. Database triggers may enqueue work but must not execute scoring or external API calls. Deduplicate by slot ID/revision and support leased claims, bounded retries, and stale-job rejection.
@@ -289,7 +293,7 @@ MVP status:
 
 Purpose:
 
-- Support online hangouts through platforms like Discord, games, or watch-party tools.
+- Support communication through mutually selected apps such as Discord or WhatsApp; games and watch-party tools are separate activity requirements.
 
 Possible integrations:
 
@@ -301,7 +305,7 @@ Possible integrations:
 MVP status:
 
 - Optional.
-- Can store user-provided platform handles instead.
+- Store user-provided handles/numbers for selected communication apps and disclose only the chosen method to assigned participants.
 
 ## 4. Environment Variables
 

@@ -27,6 +27,13 @@ The automatic slot flow is implemented locally. Hosted Supabase and scheduler ve
 
 ## Existing implementation
 
+- [x] Required private phone number and multi-select communication apps with conditional username/number fields
+- [x] Shared communication channel selection and transactional validation, separate from activity tools
+- [x] Participant-only plan contacts; cancellation, blocking, and deselection suppress further display
+- [x] Contact validation/privacy regression tests and fictional seed contacts
+- [x] Browser walkthrough of conditional app identifiers and assigned-plan contacts; API smoke tests verify contact removal after cancellation
+- [ ] Phone ownership verification and communication-provider OAuth
+
 - [x] Desktop/tablet sidebar scrolls in short windows with its scrollbar hidden, keeping navigation and account controls reachable
 
 - [x] Reject overlapping availability on creation, editing, and reopening; database exclusion constraint protects concurrent writes, with adjacent windows allowed
@@ -55,7 +62,7 @@ The automatic slot flow is implemented locally. Hosted Supabase and scheduler ve
 ## Verification notes
 
 - Domain tests exercise overlap, conflict subtraction, duration, exclusions, mode, budget, platforms, connections, timezone offsets, and feedback scoring.
-- Database tests execute all three migrations in PGlite with pgvector and btree_gist. They verify RLS, atomic scheduling, queue rollback, exclusive claims, expired lease recovery, stale tokens/revisions, cancellation, and browser-role access denial. A 6,000-slot `EXPLAIN (ANALYZE, BUFFERS)` fixture verifies overlap index use; this is not a production load benchmark.
+- Database tests execute all four migrations in PGlite with pgvector and btree_gist. They verify RLS, atomic scheduling, queue rollback, exclusive claims, expired lease recovery, stale tokens/revisions, cancellation, communication channel persistence, and browser-role access denial. A 6,000-slot `EXPLAIN (ANALYZE, BUFFERS)` fixture verifies overlap index use; this is not a production load benchmark.
 - HTTP smoke checks exercise isolated demo sessions, both planning modes, concurrent requests, feedback privacy, ownership, invalid input, and cross-origin rejection.
 - Browser walkthrough completed onboarding, availability, a generated plan, and post-hangout feedback. Desktop and phone layouts were inspected, including horizontal overflow.
 - Automatic-slot browser walkthrough verified multi-select activities/exclusions, save-to-assignment without a planning button, unmatched waiting state, and pause controls. The 390px phone layout had no horizontal overflow. The temporary verification server was stopped afterward.
@@ -63,7 +70,7 @@ The automatic slot flow is implemented locally. Hosted Supabase and scheduler ve
 
 ## External verification
 
-- [ ] Apply all three migrations to Supabase and verify RLS with two accounts
+- [ ] Apply all four migrations to Supabase and verify RLS/contact sharing with two accounts
 - [ ] Configure CRON_SECRET and a recurring worker; verify automatic offline matching and recovery
 - [ ] Verify signup, confirmation email, login, and logout against Supabase
 - [ ] Run live OpenAI extraction and embedding requests with project credentials

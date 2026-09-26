@@ -36,6 +36,9 @@ import {
 import { activities, defaultProfile } from "@/lib/catalog";
 import {
   interests,
+  communicationPlatforms,
+  phoneSchema,
+  type PlanContact,
   type Action,
   type AppState,
   type Hangout,
@@ -391,7 +394,7 @@ export function ConveneApp() {
           <p>
             {activity.venue
               ? `${activity.venue.name} · Demo venue`
-              : `${activity.platform} · Arrange your room together`}
+              : `${hangout.communicationPlatform || "Online"} · Arrange your room together`}
           </p>
           <div className="plan-person">
             <Avatar name={person?.name || "Friend"} />
@@ -519,6 +522,17 @@ export function ConveneApp() {
                 aria-label="Dismiss error"
               >
                 <X size={17} />
+              </button>
+            </div>
+          )}
+          {state.profile && !state.profile.phone && (
+            <div className="info-strip">
+              Add contact details so your matches can reach you.{" "}
+              <button
+                className="text-button"
+                onClick={() => setModal("profile")}
+              >
+                Update my profile
               </button>
             </div>
           )}
@@ -1075,6 +1089,18 @@ export function ConveneApp() {
                         <dt>Open to discovery</dt>
                         <dd>{state.profile.novelty}%</dd>
                       </div>
+                      <div>
+                        <dt>Your private phone</dt>
+                        <dd>{state.profile.phone || "Add a number"}</dd>
+                      </div>
+                      <div>
+                        <dt>Communication apps</dt>
+                        <dd>
+                          {state.profile.platforms
+                            .filter((p) => communicationPlatforms.includes(p))
+                            .join(", ") || "Choose in your profile"}
+                        </dd>
+                      </div>
                     </dl>
                   </section>
                   <section>
@@ -1221,6 +1247,10 @@ export function ConveneApp() {
           <PlanDetails
             hangout={selected}
             person={personFor(selected)?.name || "a new friend"}
+            contacts={
+              state.planContacts?.filter((c) => c.hangoutId === selected.id) ??
+              []
+            }
             busy={busy}
             error={error}
             onCancel={async () => {
@@ -1308,13 +1338,21 @@ function ProfileForm({
   onSave: (p: Profile) => Promise<void>;
 }) {
   const [step, setStep] = useState(0);
-  const [p, setP] = useState<Profile>(
-    () =>
-      initial || {
-        ...defaultProfile,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      },
-  );
+  const [contactError, setContactError] = useState("");
+  const [p, setP] = useState<Profile>(() => {
+    const platforms = initial?.platforms.filter((p) =>
+      communicationPlatforms.includes(p),
+    ) ?? ["Phone" as const];
+    return {
+      ...defaultProfile,
+      ...initial,
+      phone: initial?.phone ?? "",
+      handles: initial?.handles ?? {},
+      platforms: platforms.length ? platforms : ["Phone"],
+      timezone:
+        initial?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+  });
   const update = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     setP((v) => ({ ...v, [key]: value }));
   const toggleInterest = (interest: (typeof interests)[number]) =>
@@ -1329,6 +1367,13 @@ function ProfileForm({
     }));
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    const phone = phoneSchema.safeParse(p.phone);
+    if (!phone.success) {
+      setContactError(phone.error.issues[0].message);
+      setStep(0);
+      return;
+    }
+    setContactError("");
     if (step < 2) setStep(step + 1);
     else void onSave(p);
   };
@@ -1372,6 +1417,22 @@ function ProfileForm({
               />
             </label>
           </div>
+          <label>
+            Phone number (with country code)
+            <input
+              type="tel"
+              autoComplete="tel"
+              required
+              maxLength={30}
+              value={p.phone}
+              onChange={(e) => update("phone", e.target.value)}
+              placeholder="+1 202 555 0123"
+            />
+          </label>
+          <p className="form-hint">
+            Stored privately. Choose which contact methods to share with
+            assigned matches in the last step.
+          </p>
           <fieldset>
             <legend>
               What are you into? <span>Pick a few.</span>
@@ -1515,27 +1576,82 @@ function ProfileForm({
             </span>
           </label>
           <fieldset>
-            <legend>Your online platforms</legend>
+            <legend>Communication platforms · select all that apply</legend>
             <div className="interest-options">
-              {["Discord", "Browser", "PC", "Switch"].map((platform) => (
+              {communicationPlatforms.map((platform) => (
                 <button
                   type="button"
                   key={platform}
-                  aria-pressed={p.platforms.includes(platform as "Discord")}
-                  className={`interest-chip ${p.platforms.includes(platform as "Discord") ? "selected" : ""}`}
+                  aria-pressed={p.platforms.includes(platform)}
+                  className={`interest-chip ${p.platforms.includes(platform) ? "selected" : ""}`}
                   onClick={() =>
                     update(
                       "platforms",
-                      p.platforms.includes(platform as "Discord")
+                      p.platforms.includes(platform)
                         ? p.platforms.filter((x) => x !== platform)
-                        : [...p.platforms, platform as "Discord"],
+                        : [...p.platforms, platform],
                     )
                   }
                 >
-                  {platform}
+                  {platform === "Phone" ? "Phone / SMS" : platform}
                 </button>
               ))}
             </div>
+            <p className="form-hint">
+              We choose a method you both selected. Its number or username is
+              shared only with participants after a plan is assigned. Removing a
+              method, cancelling, or blocking stops further display, but cannot
+              erase details someone already saved.
+            </p>
+            {p.platforms.includes("Phone") && (
+              <p className="form-hint">
+                Phone / SMS will use {p.phone || "the phone number from step 1"}
+                .
+              </p>
+            )}
+            {p.platforms
+              .filter((platform) => platform !== "Phone")
+              .map((platform) => (
+                <label key={platform}>
+                  {platform === "WhatsApp"
+                    ? "WhatsApp phone number (with country code)"
+                    : `${platform} username / handle`}
+                  <input
+                    required
+                    type={platform === "WhatsApp" ? "tel" : "text"}
+                    maxLength={100}
+                    autoComplete="off"
+                    placeholder={
+                      platform === "WhatsApp"
+                        ? "+1 202 555 0123"
+                        : "Your username"
+                    }
+                    value={p.handles[platform] ?? ""}
+                    onChange={(e) =>
+                      update("handles", {
+                        ...p.handles,
+                        [platform]: e.target.value,
+                      })
+                    }
+                  />
+                  {platform === "WhatsApp" && (
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() =>
+                        update("handles", { ...p.handles, WhatsApp: p.phone })
+                      }
+                    >
+                      Use my phone number
+                    </button>
+                  )}
+                </label>
+              ))}
+            {!p.platforms.length && (
+              <p className="form-error">
+                Choose at least one way to communicate.
+              </p>
+            )}
           </fieldset>
           <Choices
             label="Activities to skip · select all that apply"
@@ -1545,6 +1661,11 @@ function ProfileForm({
             emptyLabel="Nothing in particular"
           />
         </>
+      )}
+      {contactError && (
+        <p className="form-error" role="alert">
+          {contactError}
+        </p>
       )}
       {error && (
         <p className="form-error" role="alert">
@@ -1857,12 +1978,14 @@ function FeedbackForm({
 function PlanDetails({
   hangout,
   person,
+  contacts,
   busy,
   error,
   onCancel,
 }: {
   hangout: Hangout;
   person: string;
+  contacts: PlanContact[];
   busy: boolean;
   error: string;
   onCancel: () => Promise<void>;
@@ -1883,7 +2006,9 @@ function PlanDetails({
       </p>
       <p className="detail-line">
         {a.mode === "online" ? <Monitor size={18} /> : <MapPin size={18} />}{" "}
-        {a.venue ? `${a.venue.name}, ${a.venue.area}` : a.platform}
+        {a.venue
+          ? `${a.venue.name}, ${a.venue.area}`
+          : hangout.communicationPlatform || "Online"}
       </p>
       <p className="muted">
         {a.cost
@@ -1900,8 +2025,41 @@ function PlanDetails({
       <p className="form-hint">
         {hangout.seededVenue
           ? "This is a fictional demo venue. No live hours, travel distance, or reservations have been verified."
-          : "This plan names a shared platform; it does not create a room or share account handles."}
+          : `${a.tool || "Choose your activity tools together"}. Arrange the room or call using the contact details below.`}
       </p>
+      <section className="match-contact">
+        <h3>How to reach {person}</h3>
+        {contacts.length ? (
+          contacts.map((contact) => (
+            <div key={contact.userId}>
+              <p>
+                <strong>
+                  {contact.platform === "Phone"
+                    ? "Phone / SMS"
+                    : contact.platform}
+                  :
+                </strong>{" "}
+                <span className="contact-value">{contact.value}</span>
+              </p>
+              {contact.seeded ? (
+                <p className="form-hint">
+                  Fictional demo contact. Do not message or call it.
+                </p>
+              ) : (
+                <p className="form-hint">
+                  Shared for this plan. Contact details are not verified.
+                </p>
+              )}
+            </div>
+          ))
+        ) : (
+          <p className="form-hint">
+            No shared contact details are currently available. Both participants
+            need a valid, enabled communication method in their profile.
+            Cancelled or blocked matches cannot view contacts here.
+          </p>
+        )}
+      </section>
       {error && (
         <p className="form-error" role="alert">
           {error}

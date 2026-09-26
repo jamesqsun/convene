@@ -2,6 +2,14 @@
 
 ## 1. Product Scope
 
+### Contact and communication contract
+
+The profile's `phone` field stores a normalized international number. `platforms` now names communication methods (Phone, Discord, WhatsApp, Instagram, Telegram), not Browser/PC/Switch; `handles` contains only selected app identifiers. New profile saves require a phone and at least one communication method, with a username for each selected username-based app and a country-code number for WhatsApp. Legacy profiles remain readable but must be completed before they can supply a valid matching contact.
+
+The planner requires a shared enabled method, prefers a common app before the explicitly enabled phone fallback, and writes `communicationPlatform` on the plan (`hangouts.communication_platform` in Postgres). The scheduling transaction validates both contacts under participant locks. Activity tools are separate descriptive catalog data, not communication choices; specific game/device compatibility is future work.
+
+Private contact fields stay in the existing owner-only `users.profile` JSON. Public person projections and OpenAI extraction inputs omit them. A separate `planContacts` response contains only the chosen identifier for another participant in a non-cancelled shared event, after checking blocked/declined relationships in both directions. Completed events retain access; cancellation, disabling the chosen method, or blocking suppresses future responses. This cannot undo prior disclosure. Old events with no channel can use a currently shared valid method. Contacts are format-checked, not ownership-verified; fake seed identifiers are explicitly labeled and should not be contacted.
+
 ### Authoritative clarification: automatic slot filling
 
 Availability is a durable invitation to schedule, not merely data for a button-driven request. Saving or editing a slot queues matching automatically. Unmatched slots remain pending and are reconsidered when another compatible slot is saved or relevant preferences change, with a scheduled background sweep to recover missed work. Matching continues while users are offline. References below to a “matching request” mean an internal job derived from a saved slot, not a required user action. This clarification supersedes older button-driven flow examples and singular preference fields in this document.
