@@ -17,6 +17,7 @@ describe('PlanDetailPage', () => {
         timezone: null,
         cityLabel: null,
         memoryCount: 0,
+        isRepeatingAvailability: true,
       },
       slots: [],
       plans: [samplePlan],

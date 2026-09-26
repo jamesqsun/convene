@@ -25,6 +25,7 @@ export const samplePlan: Plan = {
     { userId: 'b', name: 'Ben', interests: ['art'], phone: '+14165550002' },
   ],
   canWithdraw: true,
+  calendarStatus: null,
 }
 
 describe('PlanCard', () => {

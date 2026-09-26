@@ -8,6 +8,11 @@ type AuthAdmin = Pick<SupabaseClient['auth']['admin'], 'getUserById' | 'deleteUs
 
 // Explicit list: never cascade a truncate into Supabase-managed or unrelated tables.
 export const resetTables = [
+  'event_calendar_entries',
+  'busy_blocks',
+  'calendar_sources',
+  'calendar_connections',
+  'availability_weeks',
   'notification_deliveries',
   'notification_jobs',
   'push_subscriptions',

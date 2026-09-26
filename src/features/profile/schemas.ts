@@ -43,6 +43,7 @@ export const profilePatchSchema = z
         'Duplicate prompt',
       )
       .optional(),
+    isRepeatingAvailability: z.boolean().optional(),
   })
   .strict()
 

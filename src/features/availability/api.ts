@@ -1,11 +1,17 @@
 import { z } from 'zod'
-import { type SessionProvider, authedMutation, sessionProvider } from '@/features/auth/session'
+import {
+  type SessionProvider,
+  authed,
+  authedMutation,
+  sessionProvider,
+} from '@/features/auth/session'
 import { loadProfile } from '@/features/profile/store'
 import { type Db, getDb } from '@/lib/db'
 import { HttpError, type RouteHandler, jsonResponse, readJson } from '@/lib/http'
-import { slotInputSchema } from './schemas'
+import { slotInputSchema, weekInputSchema } from './schemas'
 import { type Slot, createSlot, reopenSlot, transitionSlot, updateSlot, windowFor } from './store'
 import { expectedBatchAt, slotStateFor } from './slot-state'
+import { isWeekStart, loadWeek, saveWeek } from './weeks'
 
 export interface AvailabilityRouteDeps {
   getProvider: () => Promise<SessionProvider>
@@ -26,6 +32,16 @@ async function timezoneFor(db: Db, userId: string): Promise<string> {
 }
 
 const idSchema = z.uuid()
+
+const weekStartSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+
+function weekStartOf(params: { weekStart?: string }, timezone: string): string {
+  const parsed = weekStartSchema.safeParse(params.weekStart)
+  if (!parsed.success || !isWeekStart(timezone, parsed.data)) {
+    throw new HttpError(400, 'invalid_week', 'weekStart must be a Monday in your city time zone')
+  }
+  return parsed.data
+}
 
 function slotId(params: { id?: string }): string {
   const parsed = idSchema.safeParse(params.id)
@@ -80,6 +96,24 @@ export function availabilityRoutes(deps: AvailabilityRouteDeps) {
       )
       return new Response(null, { status: 204 })
     }, deps.getProvider),
+    week: authed<{ weekStart: string }>(async (_request, userId, params) => {
+      const db = await deps.getDatabase()
+      const timezone = await timezoneFor(db, userId)
+      return jsonResponse({
+        week: await loadWeek(db, userId, weekStartOf(params, timezone), timezone, deps.clock()),
+      })
+    }, deps.getProvider),
+    saveWeek: authedMutation<{ weekStart: string }>(async (request, userId, params) => {
+      const input = await readJson(request, weekInputSchema)
+      const db = await deps.getDatabase()
+      const timezone = await timezoneFor(db, userId)
+      const weekStart = weekStartOf(params, timezone)
+      const result = await saveWeek(db, userId, weekStart, input.windows, timezone, deps.clock())
+      return jsonResponse({
+        result,
+        week: await loadWeek(db, userId, weekStart, timezone, deps.clock()),
+      })
+    }, deps.getProvider),
   }
 }
 
@@ -93,3 +127,5 @@ export const PATCH: RouteHandler<{ id: string }> = routes.update
 export const POST_pause: RouteHandler<{ id: string }> = routes.pause
 export const POST_reopen: RouteHandler<{ id: string }> = routes.reopen
 export const DELETE: RouteHandler<{ id: string }> = routes.remove
+export const GET_week: RouteHandler<{ weekStart: string }> = routes.week
+export const PUT_week: RouteHandler<{ weekStart: string }> = routes.saveWeek

@@ -170,3 +170,29 @@ to reverse later won.
 - **Browser tests scroll targets to the centre and assert nothing overlays them**, which mirrors a
   person scrolling and turns any real overlay bug into a test failure with the covering element
   named.
+
+## Calendar integration (added 2026-09-26, pulled forward from the deferred list at the user's request)
+
+- **Weeks carry forward automatically.** The user chose automatic over confirm-first: when the
+  planner's target week has no record for a person, their most recent week's pattern is copied
+  (status `auto`) and planned. A per-person checkbox turns this off. Editing an auto week makes it
+  `confirmed`, and later weeks copy from that. Expired slots count as the pattern source because
+  the tick expires last week's windows before carry-forward runs.
+- **Busy time is subtracted, not just drawn.** Cached busy blocks from the selected calendars are
+  removed from segments before bucketing, and a live check against the provider runs right before
+  each commit; a conflict marks the proposal `calendar_conflict`. A provider failure during the
+  live check books anyway rather than blocking the batch.
+- **Matches go to a dedicated "Convene" calendar** created in the person's Google account, never
+  their primary. Entries hold the activity, venue, time, and a pointer to the app, never phone
+  numbers. Withdrawal or cancellation deletes the entry on the next tick or immediately after the
+  withdrawal request.
+- **All calendars with a picker.** Every calendar the person can read is listed and starts
+  selected; the Convene calendar itself is hidden from the picker.
+- **Scope `calendar`** (full) is requested because creating a secondary calendar needs it;
+  `calendar.readonly` plus `calendar.events` would not allow `calendars.insert`.
+- **Refresh tokens are AES-256-GCM encrypted at rest** with a configured passphrase; demo mode
+  uses a per-process one because its tokens are fake anyway.
+- **Google's free/busy flag is honoured** (transparent events do not block) and all-day busy
+  events block the whole local day.
+- **The grid shows 06:00 to 24:00 in half-hours.** Earlier hours can be added later; the server
+  accepts any clock time.

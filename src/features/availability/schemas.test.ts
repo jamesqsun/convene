@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { slotInputSchema } from './schemas'
+import { slotInputSchema, weekInputSchema } from './schemas'
 
 describe('slotInputSchema', () => {
   it('accepts a date with clock times and rejects anything else', () => {
@@ -31,5 +31,22 @@ describe('slotInputSchema', () => {
         }).success,
       ).toBe(false)
     }
+  })
+})
+
+describe('weekInputSchema', () => {
+  it('accepts day windows including a midnight end and rejects anything else', () => {
+    expect(
+      weekInputSchema.safeParse({ windows: [{ day: 0, start: '18:00', end: '24:00' }] }).success,
+    ).toBe(true)
+    expect(
+      weekInputSchema.safeParse({ windows: [{ day: 7, start: '18:00', end: '20:00' }] }).success,
+    ).toBe(false)
+    expect(
+      weekInputSchema.safeParse({
+        windows: [{ day: 0, start: '18:00', end: '20:00', activity: 'x' }],
+      }).success,
+    ).toBe(false)
+    expect(weekInputSchema.safeParse({ windows: [], repeat: true }).success).toBe(false)
   })
 })

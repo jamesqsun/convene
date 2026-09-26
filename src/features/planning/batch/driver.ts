@@ -1,3 +1,11 @@
+import { materializeWeeks } from '@/features/availability/weeks'
+import { listBusyBlocks } from '@/features/calendar/store'
+import {
+  type SyncDeps,
+  findLiveConflict,
+  syncEventEntries,
+  syncStaleCalendars,
+} from '@/features/calendar/sync'
 import type { Db } from '@/lib/db'
 import type { Providers } from '@/lib/providers'
 import { cutoffFor, localDayBounds } from '@/lib/time'
@@ -14,7 +22,7 @@ import { generateCandidates, windowOf } from '../buckets/candidates'
 import type { HistorySnapshot } from '../buckets/reconnection'
 import { selectBuckets } from '../buckets/select'
 import { partitionBucket } from '../groups/partition'
-import { clipSlotsToDay, withoutUsers } from '../time/segments'
+import { clipSlotsToDay, subtractBusy, withoutUsers } from '../time/segments'
 import type { BucketMember, ProfileSnapshot, UserId } from '../types'
 import { type VenuePlan, planVenueAndTime } from '../venues/plan-venue'
 import type { CityContext } from '../venues/provider'
@@ -53,6 +61,8 @@ export interface DriverDeps {
   providers: Providers
   workerId: string
   clock: () => number
+  /** Encrypts stored calendar tokens; unused when no calendar provider is configured. */
+  tokenSecret: string
 }
 
 export interface GroupOutcome {
@@ -73,13 +83,24 @@ export interface BatchSummary {
 
 export interface TickSummary {
   expiredSlots: number
+  weeksCarriedForward: number
+  calendars: { synced: number; failed: number; entriesCreated: number; entriesRemoved: number }
   batches: BatchSummary[]
   notifications: DrainSummary
+}
+
+function calendarDeps(deps: DriverDeps): SyncDeps | null {
+  const provider = deps.providers.calendar
+  return provider ? { db: deps.db, provider, tokenSecret: deps.tokenSecret } : null
 }
 
 export async function runPlanningTick(deps: DriverDeps): Promise<TickSummary> {
   const now = deps.clock()
   const expiredSlots = await expireDeadSlots(deps.db, now)
+  const weeksCarriedForward = (await materializeWeeks(deps.db, now)).weeks
+  const calendar = calendarDeps(deps)
+  const calendars = { synced: 0, failed: 0, entriesCreated: 0, entriesRemoved: 0 }
+  if (calendar) Object.assign(calendars, await syncStaleCalendars(calendar, now))
   const cities = await listCityClocks(deps.db)
   const states = await listBatchStates(
     deps.db,
@@ -90,8 +111,13 @@ export async function runPlanningTick(deps: DriverDeps): Promise<TickSummary> {
     const batch = await claimBatch(deps.db, due, now, deps.workerId)
     if (batch) batches.push(await runBatch(deps, batch))
   }
+  if (calendar) {
+    const entries = await syncEventEntries(calendar, deps.clock())
+    calendars.entriesCreated = entries.created
+    calendars.entriesRemoved = entries.removed
+  }
   const notifications = await drainNotificationJobs(deps.db, deps.providers.push, deps.clock())
-  return { expiredSlots, batches, notifications }
+  return { expiredSlots, weeksCarriedForward, calendars, batches, notifications }
 }
 
 export async function runBatch(deps: DriverDeps, batch: BatchRow): Promise<BatchSummary> {
@@ -138,7 +164,12 @@ async function buildGroups(deps: DriverDeps, batch: BatchRow): Promise<ProposalD
   const day = localDayBounds(batch.timezone, batch.localDate)
   const slots = await loadPendingSlots(deps.db, batch.cityKey, day)
   const excluded = await loadExcludedUsers(deps.db, batch)
-  const segments = withoutUsers(clipSlotsToDay(slots, day, cutoffFor(batch.scoringTime)), excluded)
+  const clipped = withoutUsers(clipSlotsToDay(slots, day, cutoffFor(batch.scoringTime)), excluded)
+  const busy = await listBusyBlocks(deps.db, [...new Set(clipped.map((s) => s.userId))], {
+    from: day.start,
+    to: day.end,
+  })
+  const segments = subtractBusy(clipped, busy)
   const userIds = [...new Set(segments.map((segment) => segment.userId))]
   const snapshot = await snapshotFor(deps, batch, userIds)
   const profiles = await loadProfiles(deps.db, userIds)
@@ -217,12 +248,42 @@ async function planGroup(
     await markProposalFailed(deps.db, group.planningId, 'no_venue')
     return { planningId: group.planningId, status: 'failed', error: 'no_venue' }
   }
+  if (await hasCalendarConflict(deps, group, plan)) {
+    await markProposalFailed(deps.db, group.planningId, 'calendar_conflict')
+    return { planningId: group.planningId, status: 'failed', error: 'calendar_conflict' }
+  }
   await markProposalPlanned(
     deps.db,
     group.planningId,
     planJson(plan, buildExplanation(profiles, plan.activity.name)),
   )
   return commitProposal(deps, group.planningId)
+}
+
+/** Live check against connected calendars right before booking, so a meeting added today is honoured. */
+async function hasCalendarConflict(
+  deps: DriverDeps,
+  group: ProposalDraft,
+  plan: VenuePlan,
+): Promise<boolean> {
+  const calendar = calendarDeps(deps)
+  if (!calendar) return false
+  for (const member of group.members) {
+    try {
+      if (
+        await findLiveConflict(
+          calendar,
+          member.userId,
+          { from: plan.start, to: plan.end },
+          deps.clock(),
+        )
+      )
+        return true
+    } catch (error) {
+      console.warn(`[planning] calendar check failed for ${member.userId}, booking anyway:`, error)
+    }
+  }
+  return false
 }
 
 /** Runs the atomic commit; a rejected proposal is marked failed with the database's reason code. */

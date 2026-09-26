@@ -21,6 +21,9 @@ describe('PlanDetail', () => {
     expect(html).toContain('Hours unverified')
     expect(html).toContain('You share an interest in coffee.')
     expect(html).toContain('Withdraw from this plan')
+    expect(render({ ...samplePlan, calendarStatus: 'created' })).toContain(
+      'In your Google Calendar',
+    )
   })
 
   it('hides withdraw once it is no longer possible and shows cancellation', () => {

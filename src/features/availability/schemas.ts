@@ -13,3 +13,16 @@ export const slotInputSchema = z
   .strict()
 
 export type SlotInput = z.infer<typeof slotInputSchema>
+
+const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$|^24:00$/, 'HH:MM')
+
+/** A week's availability as day-of-week windows; the server turns them into dated slots. */
+export const weekInputSchema = z
+  .object({
+    windows: z
+      .array(z.object({ day: z.number().int().min(0).max(6), start: clock, end: clock }).strict())
+      .max(70),
+  })
+  .strict()
+
+export type WeekInput = z.infer<typeof weekInputSchema>

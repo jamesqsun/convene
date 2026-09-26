@@ -54,6 +54,20 @@ listed separately. Judgment calls are in [DECISIONS.md](DECISIONS.md).
 - [x] Deleted memories may be recreated by a later generation; no suppression list.
 - [x] Runnable setup documentation and a local end-to-end smoke test.
 
+## Calendar integration (added after the first release)
+
+- [x] Weekly availability grid (Monday to Sunday, half-hour cells, city time zone) saved as dated
+      slots with diffing against existing pending, paused, and filled slots.
+- [x] Automatic carry-forward of the most recent week when the planner's target week is unset,
+      with a per-person off switch and a chain that follows edited weeks.
+- [x] Google OAuth connection with encrypted refresh tokens, calendar picker over all readable
+      calendars, cached busy time refreshed by the tick, and manual sync and disconnect.
+- [x] Busy time subtracted from availability before bucketing and re-checked live before commit.
+- [x] Matched hangouts written to a dedicated Convene calendar and removed on withdrawal or
+      cancellation; plan detail shows the calendar status.
+- [x] Fake calendar provider for demo mode with two fictional calendars and a weekly busy pattern;
+      Maya and Ben are connected by the seed.
+
 ## Verification performed
 
 - `pnpm typecheck`, `pnpm test` (346 tests across pure logic, migrations in PGlite, routes, and
@@ -74,6 +88,8 @@ listed separately. Judgment calls are in [DECISIONS.md](DECISIONS.md).
 - [ ] Configure a cron for `POST /api/jobs/run` and observe a batch assign plans while every user
       is offline.
 - [ ] Install on a phone over HTTPS and receive assignment and cancellation pushes.
+- [ ] Connect a real Google account, see its busy time on the grid, and find an assigned hangout
+      in the Convene calendar.
 
 ## Deferred
 

@@ -5,6 +5,9 @@ import {
   authedMutation,
   sessionProvider,
 } from '@/features/auth/session'
+import { configuredTokenSecret } from '@/features/calendar/config'
+import type { CalendarProvider } from '@/features/calendar/provider'
+import { syncEventEntries } from '@/features/calendar/sync'
 import type { PushSender } from '@/features/push/provider'
 import { drainNotificationJobs } from '@/features/push/sender'
 import { type Db, getDb } from '@/lib/db'
@@ -17,6 +20,8 @@ export interface EventRouteDeps {
   getProvider: () => Promise<SessionProvider>
   getDatabase: () => Promise<Db>
   getPush: () => PushSender
+  getCalendar: () => CalendarProvider | null
+  tokenSecret: () => string
   clock: () => number
 }
 
@@ -42,6 +47,13 @@ export function eventRoutes(deps: EventRouteDeps) {
       await drainNotificationJobs(db, deps.getPush(), deps.clock(), 20).catch((error) =>
         console.warn('[withdraw] drain failed:', error),
       )
+      const calendar = deps.getCalendar()
+      if (calendar) {
+        await syncEventEntries(
+          { db, provider: calendar, tokenSecret: deps.tokenSecret() },
+          deps.clock(),
+        ).catch((error) => console.warn('[withdraw] calendar sync failed:', error))
+      }
       return jsonResponse({ result: outcome.result, remaining: outcome.remaining })
     }, deps.getProvider),
   }
@@ -51,6 +63,8 @@ const routes = eventRoutes({
   getProvider: sessionProvider,
   getDatabase: getDb,
   getPush: () => getProviders().push,
+  getCalendar: () => getProviders().calendar,
+  tokenSecret: configuredTokenSecret,
   clock: Date.now,
 })
 export const GET: RouteHandler<{ eventId: string }> = routes.detail

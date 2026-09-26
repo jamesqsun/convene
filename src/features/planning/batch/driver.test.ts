@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { fakeCalendarProvider } from '@/features/calendar/fake'
+import { saveConnection } from '@/features/calendar/store'
+import { syncUserCalendar } from '@/features/calendar/sync'
 import { fakeAiProvider } from '@/features/ai/fake'
 import type { AiProvider } from '@/features/ai/provider'
 import { fakePushSender } from '@/features/push/fake'
@@ -27,7 +30,13 @@ let clock = mondayMidnight + 5 * minute
 let providers: Providers
 
 function deps(overrides: Partial<Providers> = {}): DriverDeps {
-  return { db, providers: { ...providers, ...overrides }, workerId: 'test', clock: () => clock }
+  return {
+    db,
+    providers: { ...providers, ...overrides },
+    workerId: 'test',
+    clock: () => clock,
+    tokenSecret: 'x'.repeat(32),
+  }
 }
 
 async function personWithSlot(start: string, end: string, interests = ['coffee']): Promise<string> {
@@ -39,7 +48,12 @@ async function personWithSlot(start: string, end: string, interests = ['coffee']
 beforeEach(async () => {
   db = await createTestDb()
   clock = mondayMidnight + 5 * minute
-  providers = { ai: fakeAiProvider(), venues: fictionalVenueProvider(), push: fakePushSender() }
+  providers = {
+    ai: fakeAiProvider(),
+    venues: fictionalVenueProvider(),
+    push: fakePushSender(),
+    calendar: fakeCalendarProvider(),
+  }
   vi.spyOn(console, 'warn').mockImplementation(() => undefined)
   vi.spyOn(console, 'error').mockImplementation(() => undefined)
 })
@@ -214,5 +228,85 @@ describe('runPlanningTick', () => {
     )
     const summary = await runPlanningTick(deps())
     expect(summary.expiredSlots).toBe(1)
+  })
+
+  it('subtracts cached busy time and refuses to book over a live calendar conflict', async () => {
+    const provider = fakeCalendarProvider()
+    const tokenSecret = 'x'.repeat(32)
+    const tokens = {
+      refreshToken: 'r',
+      accessToken: 'a',
+      expiresAt: clock + hour,
+      email: 'you@gmail.demo',
+    }
+    // Both people are free 18:00 to 21:00 Wednesday, but one has a cached 18:00 to 18:30 meeting on
+    // their work calendar, which is the only calendar they selected.
+    const busyPerson = await personWithSlot(at(18), at(21))
+    await personWithSlot(at(18), at(21))
+    await saveConnection(db, busyPerson, 'fake', tokens, tokenSecret)
+    await syncUserCalendar({ db, provider, tokenSecret }, busyPerson, clock)
+    await db.query(
+      "update calendar_sources set is_selected = (calendar_id = 'work') where user_id = $1",
+      [busyPerson],
+    )
+    await db.query(
+      "insert into busy_blocks (user_id, calendar_id, external_id, summary, starts_at, ends_at) values ($1, 'work', 'late-standup', 'Standup', $2::timestamptz, $3::timestamptz)",
+      [busyPerson, at(18), at(18, 30)],
+    )
+    const first = await runPlanningTick(deps({ calendar: provider }))
+    expect(first.batches[0]!.groups.map((g) => g.status)).toEqual(['committed'])
+    const event = (await db.query<{ starts_at: Date }>('select starts_at from events'))[0]!
+    expect(event.starts_at.toISOString()).toBe(at(18, 30))
+    expect(first.calendars).toMatchObject({ entriesCreated: 1 })
+    expect(provider.writtenEvents).toHaveLength(1)
+
+    // A second pair: a meeting lands on one person's calendar after the cache was refreshed, so only
+    // the live check before booking can see it.
+    const lateBooker = await personWithSlot(at(20), at(22))
+    await personWithSlot(at(20), at(22))
+    await saveConnection(db, lateBooker, 'fake', tokens, tokenSecret)
+    clock = mondayMidnight + 70 * minute
+    await syncUserCalendar({ db, provider, tokenSecret }, lateBooker, clock)
+    const liveOnly = {
+      ...provider,
+      listBusy: async () => [
+        {
+          calendarId: 'primary',
+          externalId: 'late',
+          summary: 'Last-minute call',
+          startsAt: Date.parse(at(20)),
+          endsAt: Date.parse(at(21)),
+          isAllDay: false,
+        },
+      ],
+    }
+    const second = await runPlanningTick(deps({ calendar: liveOnly }))
+    expect(second.batches[0]!.groups.map((g) => g.error)).toEqual(['calendar_conflict'])
+    expect(await count(db, 'events')).toBe(1)
+  })
+
+  it('carries availability forward before planning', async () => {
+    const userId = await createUser(db)
+    const lastWednesday = zonedTime(toronto.timezone, '2026-09-23')
+    await createSlot(
+      db,
+      userId,
+      new Date(lastWednesday + 18 * hour).toISOString(),
+      new Date(lastWednesday + 21 * hour).toISOString(),
+    )
+    await db.query(
+      "insert into availability_weeks (user_id, week_start, status) values ($1, '2026-09-21', 'confirmed')",
+      [userId],
+    )
+    const summary = await runPlanningTick(deps())
+    expect(summary.weeksCarriedForward).toBe(1)
+    expect(
+      await count(
+        db,
+        'availability_slots',
+        "user_id = $1 and status = 'pending' and starts_at = $2::timestamptz",
+        [userId, at(18)],
+      ),
+    ).toBe(1)
   })
 })

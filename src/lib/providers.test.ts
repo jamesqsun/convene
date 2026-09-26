@@ -25,12 +25,20 @@ describe('providersFor', () => {
 
   it('falls back per provider in connected mode', () => {
     const bare = providersFor(readEnv(connected))
-    expect([bare.ai.kind, bare.venues.kind, bare.push.kind]).toEqual(['fake', 'fictional', 'fake'])
+    expect([bare.ai.kind, bare.venues.kind, bare.push.kind, bare.calendar]).toEqual([
+      'fake',
+      'fictional',
+      'fake',
+      null,
+    ])
     const full = providersFor(
       readEnv({
         ...connected,
         META_API_KEY: 'sk',
         GEMINI_API_KEY: 'gk',
+        GOOGLE_CLIENT_ID: 'client-id',
+        GOOGLE_CLIENT_SECRET: 'client-secret',
+        CALENDAR_TOKEN_SECRET: 'x'.repeat(32),
         GOOGLE_PLACES_API_KEY: 'g',
         VAPID_PUBLIC_KEY: 'pub',
         VAPID_PRIVATE_KEY: 'priv',
@@ -42,5 +50,6 @@ describe('providersFor', () => {
       'google_places',
       'web_push',
     ])
+    expect(full.calendar?.kind).toBe('google')
   })
 })
