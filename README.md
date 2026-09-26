@@ -50,13 +50,15 @@ NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
 OPENAI_API_KEY=YOUR_OPENAI_API_KEY
-OPENAI_MODEL=gpt-4.1-mini
+OPENAI_MODEL=gpt-6-luna
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 ```
 
 Get your Supabase URL and keys from the project's Connect dialog / API settings. The publishable key identifies the project; the service-role key and OpenAI key are server-only secrets. Never prefix those secret names with `NEXT_PUBLIC_` or commit `.env.local`.
 
 The embedding column is fixed at **1536 dimensions**. The integration explicitly requests that dimension; changing to an incompatible model requires a schema migration and regenerating stored embeddings. The LLM must support Responses API structured outputs. You can override the model IDs through the environment.
+
+Preference extraction defaults to GPT-6 Luna with low reasoning effort. Other model overrides use their default reasoning settings. Embeddings use `text-embedding-3-small` independently.
 
 When OpenAI is unavailable or returns invalid output, the app saves the user's explicit answers and shows a notice. Interest-based matching continues. It does not silently switch to another LLM provider.
 

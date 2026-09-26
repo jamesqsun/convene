@@ -8,6 +8,7 @@ This is the working implementation tracker. Checked items are implemented; exter
 - [x] Dashboard, availability, plans, connections, and profile screens
 - [x] Guided onboarding and editable preferences
 - [x] OpenAI structured preference extraction and embeddings (live verification pending)
+- [x] GPT-6 Luna default for preference extraction with low reasoning effort
 - [x] Server-side validation and authenticated API boundaries
 - [x] Supabase Auth integration, Postgres migration, and row-level security
 - [x] Seeded users, activity catalog, and clearly labeled fictional venues

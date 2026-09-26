@@ -46,8 +46,12 @@ export async function understand(
     profile.idealHangout,
   ].join("\n");
   try {
+    const model = process.env.OPENAI_MODEL || "gpt-6-luna";
     const response = await client.responses.parse({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      model,
+      ...(model.startsWith("gpt-6-luna")
+        ? { reasoning: { effort: "low" as const } }
+        : {}),
       store: false,
       input: [
         {
