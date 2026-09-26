@@ -55,7 +55,13 @@ function People({ plan }: { plan: Plan }) {
   )
 }
 
-export function PlanDetail({ plan }: { plan: Plan }) {
+export interface PlanDetailProps {
+  plan: Plan
+  /** Called after a successful withdrawal, before the state refresh removes the plan. */
+  onWithdrawn?: (message: string) => void
+}
+
+export function PlanDetail({ plan, onWithdrawn }: PlanDetailProps) {
   const { refresh } = useAppState()
   const [message, setMessage] = useState<string | null>(null)
 
@@ -70,11 +76,12 @@ export function PlanDetail({ plan }: { plan: Plan }) {
       const result = await apiFetch<{ result: string }>(`/api/plans/${plan.eventId}/withdraw`, {
         method: 'POST',
       })
-      setMessage(
+      const outcome =
         result.result === 'event_cancelled'
           ? 'You left, and the plan was cancelled because only one person remained.'
-          : 'You left the plan.',
-      )
+          : 'You left the plan.'
+      setMessage(outcome)
+      onWithdrawn?.(outcome)
       await refresh()
     } catch (caught) {
       setMessage(caught instanceof ApiError ? caught.message : 'Could not withdraw')
@@ -92,6 +99,11 @@ export function PlanDetail({ plan }: { plan: Plan }) {
         {plan.status === 'cancelled' && (
           <p className="mt-1 inline-block rounded-full bg-stone-200 px-2 py-0.5 text-xs">
             Cancelled
+          </p>
+        )}
+        {plan.calendarStatus === 'created' && (
+          <p className="mt-1 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-900">
+            In your Google Calendar
           </p>
         )}
       </header>
