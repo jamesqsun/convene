@@ -38,6 +38,7 @@ describe('resetSeededWorld', () => {
   it('removes extra users and dirty state, restores fresh seed counts, and can run twice', async () => {
     await seedDemoWorld(db, fakeAiProvider(), { now })
     const baseline = await Promise.all(resetTables.map((table) => count(db, table)))
+    const migrationCount = await count(db, 'schema_migrations')
     await seedDemoWorld(db, fakeAiProvider(), { now }) // Leaves cancelled slots in ordinary seed.
     const extra = await createUser(db)
     await db.query("update profiles set name = 'Changed' where id = $1", [personas[0]!.id])
@@ -62,7 +63,7 @@ describe('resetSeededWorld', () => {
     expect(admin.createUser).toHaveBeenCalledWith(
       expect.objectContaining({ password: 'reset-password', email_confirm: true }),
     )
-    expect(await count(db, 'schema_migrations')).toBe(13)
+    expect(await count(db, 'schema_migrations')).toBe(migrationCount)
   })
 
   it('fails before deletion if API and database users do not match', async () => {

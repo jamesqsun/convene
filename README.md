@@ -122,6 +122,17 @@ notifications; filled slots and original planning-date assignments remain. Cance
 already-completed events are unchanged. Existing Google Calendar entries are not updated.
 The script prints the number completed and exits; repeating it does not alter completed events.
 
+Past hangouts also offer private overall event feedback, separate from each person's meet-again
+answer. Submitting saves the text immediately (HTTP 202); Next.js `after` starts extraction and
+embedding after the response. You can leave the page; the app's regular state refresh shows when
+memories are ready. These memories help future grouping and activity ranking and can be edited
+or deleted from the profile. The existing worker retries pending updates, including interrupted
+requests, with a ten-minute lease and exponential backoff; after five attempts a manual retry is
+offered. Each worker tick handles up to two updates concurrently. Keep the worker running for
+retry recovery. Repeated submissions do not duplicate memories. Onboarding regeneration preserves
+feedback memories. Apply migrations `0013_event_feedback.sql` and `0014_feedback_memory_jobs.sql`
+with `pnpm migrate` before deploying with `npx vercel@latest --prod`.
+
 Events complete automatically at their end time (derived, no worker needed). Withdrawal is only
 possible before the start; attendance is assumed afterwards.
 
