@@ -181,7 +181,6 @@ to reverse later won.
   withdraw button under the nav.
 - **Past availability is not returned to the client.** A slot whose window has ended has no
   actions and its event is no longer in the plans list, so the state read filters on `ends_at`.
-  Past hangouts live on the Hangouts page.
 - **Browser tests scroll targets to the centre and assert nothing overlays them**, which mirrors a
   person scrolling and turns any real overlay bug into a test failure with the covering element
   named.
@@ -211,3 +210,18 @@ to reverse later won.
   events block the whole local day.
 - **The grid shows 06:00 to 24:00 in half-hours.** Earlier hours can be added later; the server
   accepts any clock time.
+
+## Plans and Hangouts merged into one page (added 2026-09-27)
+
+- **The Hangouts tab is gone; past hangouts are a section at the bottom of Plans.** The user asked
+  for one screen instead of two, with completed hangouts reachable without a dedicated tab. The
+  feedback question ("would you meet them again?") still works the same way, just in
+  `PastHangoutsSection` under Plans; it caps the initial list at three and expands on request
+  rather than paginating.
+- **Tapping a plan card opens a popup instead of navigating.** `PlanDetail` (venue, people,
+  withdraw) now also renders inside a generic `Modal` from the plans list, so the same component
+  backs both the popup and the standalone `/plans/[eventId]` page that push notifications and
+  other deep links still open directly.
+- **Plan cards are decorative, not photographic.** Nothing in the schema stores venue or activity
+  photos, so cards use a deterministic gradient and initials-only avatars keyed by id, rather than
+  fabricating placeholder imagery.

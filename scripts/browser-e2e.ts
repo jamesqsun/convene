@@ -149,7 +149,7 @@ async function benFlow(page: Page): Promise<void> {
   console.log('Ben: feedback and graph')
   await step('signs in', () => signInAs(page, 'Ben'))
   await step('answers yes about a past co-participant', async () => {
-    await page.goto(`${baseUrl}/hangouts`, { waitUntil: 'networkidle0' })
+    await page.goto(`${baseUrl}/plans`, { waitUntil: 'networkidle0' })
     await waitForText(page, 'Past hangouts')
     await clickText(page, 'Yes')
     await waitForText(page, 'You answered yes')
