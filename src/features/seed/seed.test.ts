@@ -7,6 +7,7 @@ import { pairKey } from '@/features/planning/buckets/reconnection'
 import type { Db } from '@/lib/db'
 import { zonedTime } from '@/lib/time'
 import { createTestDb } from '../../../supabase/tests/harness'
+import { generatedPastEvents, generatedPeople } from './generate'
 import { personas, seedFriendships } from './people'
 import { seedDemoWorld } from './seed'
 
@@ -81,6 +82,41 @@ describe('seedDemoWorld', () => {
       myAnswer: 'no',
       isMutualFriend: false,
     })
+  })
+
+  it('seeds generated people and their history beside the cast, idempotently', async () => {
+    const people = generatedPeople(30)
+    const pastEvents = generatedPastEvents(people, 10)
+    const count = async (sql: string) => (await db.query<{ n: number }>(sql))[0]!.n
+    const friendshipsBefore = await count('select count(*)::int as n from friendships')
+
+    const first = await seedDemoWorld(db, fakeAiProvider(), { now, people, pastEvents })
+    expect(first).toEqual({ people: 30, slots: 60, historyEvents: 10, calendarsConnected: 0 })
+    expect(await count('select count(*)::int as n from profiles')).toBe(42)
+    expect(
+      await count(
+        'select count(*)::int as n from profiles where onboarding_completed_at is not null',
+      ),
+    ).toBe(41)
+    expect(await count('select count(*)::int as n from events')).toBe(12)
+    expect(await count('select count(*)::int as n from friendships')).toBeGreaterThan(
+      friendshipsBefore,
+    )
+    expect(
+      await count('select count(*)::int as n from preference_memories where embedding is null'),
+    ).toBe(0)
+    expect(
+      await count(
+        "select count(*)::int as n from events where timezone = 'America/Vancouver' and venue->>'address' like '%Vancouver%'",
+      ),
+    ).toBeGreaterThan(0)
+
+    const second = await seedDemoWorld(db, fakeAiProvider(), { now, people, pastEvents })
+    expect(second).toMatchObject({ people: 30, slots: 60, historyEvents: 0 })
+    expect(await count('select count(*)::int as n from profiles')).toBe(42)
+    expect(
+      await count("select count(*)::int as n from availability_slots where status = 'pending'"),
+    ).toBe(82)
   })
 
   it('returns a mid-onboarding persona to that state after someone finished onboarding as them', async () => {
