@@ -19,6 +19,7 @@
     "embeddings:rebuild": "tsx scripts/rebuild-embeddings.ts",
     "worker": "tsx scripts/worker.ts",
     "planning:run-all": "tsx scripts/run-all-planning.ts",
+    "events:complete-all": "tsx scripts/complete-all-events.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "smoke": "tsx scripts/smoke.ts",

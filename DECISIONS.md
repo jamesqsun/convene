@@ -65,6 +65,14 @@ to reverse later won.
 
 ## Schema
 
+- **Manual completion command.** `events:complete-all` calls the deployed secret-authenticated
+  POST `/api/jobs/complete-events`. In one transaction it backdates unfinished scheduled events
+  to end now, shifts their starts by the same amount, releases future reservations, and settles
+  queued notifications. Filled slots and original planning-date assignments remain to prevent
+  replanning; original proposed times remain in planning proposals. Cancelled and already-ended
+  events are untouched. Completion and feedback still use the existing timestamp semantics.
+  Previously mirrored Google Calendar entries are not rewritten by this manual command.
+
 - **Event completion is derived**, never stored: `status = 'scheduled' and ends_at <= now()`. The
   spec ties feedback eligibility and recency to the end timestamp regardless of when a worker runs,
   so a stored "completed" flag would only add a race.

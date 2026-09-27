@@ -114,6 +114,14 @@ sync, and notifications. It does not generate unlimited future recurring weeks. 
 remain subject to Vercel's request duration limit. The command prints the full summary and exits
 nonzero for HTTP errors or reported batch/group failures.
 
+To force all unfinished scheduled events into past hangouts, run `pnpm events:complete-all`
+after deploying the latest server code. It uses `CONVENE_WORKER_URL` and `CRON_SECRET` from
+`.env.local` to call the running server. This changes their start/end timestamps to end now,
+preserving duration, and unlocks feedback. It releases future reservations and settles queued
+notifications; filled slots and original planning-date assignments remain. Cancelled and
+already-completed events are unchanged. Existing Google Calendar entries are not updated.
+The script prints the number completed and exits; repeating it does not alter completed events.
+
 Events complete automatically at their end time (derived, no worker needed). Withdrawal is only
 possible before the start; attendance is assumed afterwards.
 
