@@ -29,13 +29,31 @@ export const samplePlan: Plan = {
 }
 
 describe('PlanCard', () => {
-  it('links to the plan with activity, time, and venue', () => {
-    const html = renderToStaticMarkup(<PlanCard plan={samplePlan} />)
-    expect(html).toContain('href="/plans/evt"')
+  it('shows activity, time, venue, and the people on it, and opens the detail popup', () => {
+    const html = renderToStaticMarkup(<PlanCard plan={samplePlan} onOpen={() => undefined} />)
+    expect(html).toContain('Coffee and conversation')
+    expect(html).toContain('(Demo) Cafe')
     expect(html).toContain('Sat, Oct 3, 6:00 PM')
-    expect(html).toContain('2 people')
+    expect(html).toContain('>A<')
+    expect(html).toContain('>B<')
+    expect(html).toContain('role="button"')
     expect(
-      renderToStaticMarkup(<PlanCard plan={{ ...samplePlan, status: 'cancelled' }} />),
+      renderToStaticMarkup(
+        <PlanCard plan={{ ...samplePlan, status: 'cancelled' }} onOpen={() => undefined} />,
+      ),
     ).toContain('Cancelled')
+  })
+
+  it('shows an overflow bubble beyond the avatar limit', () => {
+    const manyPeople = Array.from({ length: 6 }, (_, i) => ({
+      userId: `p${i}`,
+      name: `Person ${i}`,
+      interests: [],
+      phone: null,
+    }))
+    const html = renderToStaticMarkup(
+      <PlanCard plan={{ ...samplePlan, participants: manyPeople }} onOpen={() => undefined} />,
+    )
+    expect(html).toContain('+2')
   })
 })
