@@ -8,6 +8,7 @@ import type { Db } from '@/lib/db'
 
 export interface PlanVenue {
   provider: string
+  placeId?: string | null
   name: string
   address: string
   lat: number
@@ -49,6 +50,7 @@ interface EventRow {
   explanation: string
   venue: {
     provider: string
+    place_id?: string | null
     name: string
     address: string
     lat: number
@@ -106,6 +108,7 @@ function toPlan(row: EventRow, participants: PlanParticipant[], now: number): Pl
     },
     venue: {
       provider: row.venue.provider,
+      placeId: row.venue.place_id ?? null,
       name: row.venue.name,
       address: row.venue.address,
       lat: row.venue.lat,

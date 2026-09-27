@@ -14,6 +14,26 @@ function render(plan: typeof samplePlan) {
 }
 
 describe('PlanDetail', () => {
+  it('opens the venue listing, falls back to name and address, and omits fictional maps links', () => {
+    const venue = {
+      ...samplePlan.venue,
+      provider: 'google_places',
+      name: 'Cafe & Bakery',
+      address: '12 Main St, Toronto',
+      placeId: 'ChIJ-example',
+    }
+    const mapsLink = (html: string) =>
+      new URL(
+        html.match(/href="(https:\/\/www.google.com\/maps[^\"]+)"/)![1]!.replaceAll('&amp;', '&'),
+      )
+    const url = mapsLink(render({ ...samplePlan, venue }))
+    expect(url.searchParams.get('query_place_id')).toBe('ChIJ-example')
+    expect(url.searchParams.get('query')).toBe('Cafe & Bakery, 12 Main St, Toronto')
+    const fallback = mapsLink(render({ ...samplePlan, venue: { ...venue, placeId: null } }))
+    expect(fallback.searchParams.has('query_place_id')).toBe(false)
+    expect(fallback.searchParams.get('query')).toBe('Cafe & Bakery, 12 Main St, Toronto')
+    expect(render(samplePlan)).not.toContain('Open in Maps')
+  })
   it('shows people with phones, venue badges, explanation, and the withdraw control', () => {
     const html = render(samplePlan)
     expect(html).toContain('tel:+14165550001')

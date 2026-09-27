@@ -7,7 +7,12 @@ import { formatTimeRange, zoneLabel } from '@/lib/format'
 import type { Plan } from './read'
 
 function VenueBlock({ plan }: { plan: Plan }) {
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${plan.venue.lat},${plan.venue.lng}`
+  const query = [plan.venue.name, plan.venue.address].filter(Boolean).join(', ')
+  const params = new URLSearchParams({ api: '1', query })
+  if (plan.venue.provider === 'google_places' && plan.venue.placeId) {
+    params.set('query_place_id', plan.venue.placeId)
+  }
+  const mapsUrl = `https://www.google.com/maps/search/?${params}`
   return (
     <div>
       <h2 className="text-sm font-semibold text-stone-600">Where</h2>
@@ -24,9 +29,11 @@ function VenueBlock({ plan }: { plan: Plan }) {
             Hours unverified
           </span>
         )}
-        <a href={mapsUrl} target="_blank" rel="noreferrer" className="underline">
-          Open in Maps
-        </a>
+        {plan.venue.provider !== 'fictional' && (
+          <a href={mapsUrl} target="_blank" rel="noreferrer" className="underline">
+            Open in Maps
+          </a>
+        )}
       </div>
     </div>
   )
