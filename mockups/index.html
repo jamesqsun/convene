@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Convene UI mockups</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Nunito:wght@500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --page: #efe8df;
+        --ink: #3d2b1f;
+        --muted: #8c7b70;
+        --line: #e3d8cc;
+        --surface: #fffcf8;
+      }
+      body {
+        margin: 0;
+        font-family: 'Nunito', system-ui, sans-serif;
+        background: var(--page);
+        color: var(--ink);
+        line-height: 1.5;
+      }
+      main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+      h1,
+      h2 {
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 600;
+      }
+      h1 {
+        font-size: 40px;
+        margin: 0 0 6px;
+      }
+      .lede {
+        font-size: 17px;
+        color: var(--muted);
+        max-width: 760px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 18px;
+        margin: 28px 0;
+      }
+      .gallery-card {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        text-decoration: none;
+        color: var(--card-ink);
+        background: var(--card-bg);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        border-radius: 22px;
+        padding: 20px;
+        box-shadow: 0 2px 0 rgba(60, 40, 20, 0.04);
+        transition: transform 0.15s;
+      }
+      .gallery-card:hover {
+        transform: translateY(-3px);
+      }
+      .gallery-card .num {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 28px;
+        color: var(--card-primary);
+      }
+      .gallery-card strong {
+        font-size: 18px;
+      }
+      .gallery-card em {
+        font-style: normal;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--card-primary);
+        font-weight: 800;
+      }
+      .gallery-card p {
+        margin: 2px 0 0;
+        font-size: 13.5px;
+      }
+      .pal {
+        display: flex;
+        gap: 6px;
+      }
+      .pal i {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+      }
+      .sources {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        padding: 22px 26px;
+      }
+      .sources ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      .sources li {
+        margin: 6px 0;
+      }
+      .sources a {
+        color: var(--ink);
+      }
+      .principles {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 14px;
+        margin: 18px 0 30px;
+      }
+      .principles div {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 16px;
+      }
+      .principles strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Convene UI mockups</h1>
+      <p class="lede">
+        Ten screens, each shown on a phone and on a computer, each in its own warm palette drawn
+        from 2026 colour-trend research. The layouts follow one system: cream bases, one anchor
+        colour for actions, one accent for good news, rounded cards and rounded type.
+      </p>
+      <div class="principles">
+        <div>
+          <strong>60 / 25 / 15</strong>Warm neutral carries the layout, the anchor colour owns every
+          primary action, the remaining 15% is a counterpoint or a grounding dark.
+        </div>
+        <div>
+          <strong>Warm whites only</strong>Every background sits between cream and oat; no pure
+          white, no cool grey, so the accents never look muddy.
+        </div>
+        <div>
+          <strong>Rounded everything</strong>Fraunces for headings, Nunito for text, 18px card
+          radii, pill chips, full-width buttons on phone.
+        </div>
+        <div>
+          <strong>Same screen, two frames</strong>Each page renders the identical markup twice;
+          container queries switch to a sidebar and two columns above 700px.
+        </div>
+      </div>
+      <div class="grid">
+        <a
+          class="gallery-card"
+          href="01-welcome.html"
+          style="
+            --card-bg: #fff8f1;
+            --card-primary: #e07a5f;
+            --card-accent: #ffcba4;
+            --card-ink: #3d2b1f;
+          "
+          ><span class="num">01</span><strong>Welcome and sign in</strong
+          ><span class="pal"
+            ><i style="background: #fff8f1"></i><i style="background: #ffe9d9"></i
+            ><i style="background: #ffcba4"></i><i style="background: #e07a5f"></i
+            ><i style="background: #3d2b1f"></i></span
+          ><em>Peach & Cream</em>
+          <p>
+            Peach and cream from the creativebooster peach palettes, with a sun-baked coral as the
+            single strong colour. Rounded serif headings for a handwritten-invitation feel.
+          </p></a
+        ><a
+          class="gallery-card"
+          href="02-onboarding-interests.html"
+          style="
+            --card-bg: #f5efe6;
+            --card-primary: #c56a4d;
+            --card-accent: #9caf88;
+            --card-ink: #2b2320;
+          "
+          ><span class="num">02</span><strong>Onboarding: interests</strong
+          ><span class="pal"
+            ><i style="background: #f5efe6"></i><i style="background: #f3e2d8"></i
+            ><i style="background: #9caf88"></i><i style="background: #c56a4d"></i
+            ><i style="background: #2b2320"></i></span
+          ><em>Terracotta & Sage</em>
+          <p>
+            The terracotta guide's 60/25/15 rule: cream carries the layout, clay terracotta anchors
+            the action, sage is the counterpoint on selected chips.
+          </p></a
+        ><a
+          class="gallery-card"
+          href="03-onboarding-answers.html"
+          style="
+            --card-bg: #fbf6ea;
+            --card-primary: #c99a2e;
+            --card-accent: #6b7b4b;
+            --card-ink: #2f2a1e;
+          "
+          ><span class="num">03</span><strong>Onboarding: written answers</strong
+          ><span class="pal"
+            ><i style="background: #fbf6ea"></i><i style="background: #f6eccf"></i
+            ><i style="background: #6b7b4b"></i><i style="background: #c99a2e"></i
+            ><i style="background: #2f2a1e"></i></span
+          ><em>Honey & Olive</em>
+          <p>
+            Honey on parchment, the palette of a notebook. Olive keeps the privacy note calm rather
+            than alarming.
+          </p></a
+        ><a
+          class="gallery-card"
+          href="04-availability.html"
+          style="
+            --card-bg: #f4f1ea;
+            --card-primary: #6f8c5e;
+            --card-accent: #e2725b;
+            --card-ink: #2e332a;
+          "
+          ><span class="num">04</span><strong>Availability</strong
+          ><span class="pal"
+            ><i style="background: #f4f1ea"></i><i style="background: #e7eedf"></i
+            ><i style="background: #e2725b"></i><i style="background: #6f8c5e"></i
+            ><i style="background: #2e332a"></i></span
+          ><em>Sage & Linen</em>
+          <p>
+            Sage (#9CAF88 family, deepened for contrast) on linen. Terracotta appears only on the
+            one state that needs attention.
+          </p></a
+        ><a
+          class="gallery-card"
+          href="05-plans.html"
+          style="
+            --card-bg: #fff4e8;
+            --card-primary: #d9774f;
+            --card-accent: #f4a261;
+            --card-ink: #3b2a22;
+          "
+          ><span class="num">05</span><strong>Plans and the assignment banner</strong
+          ><span class="pal"
+            ><i style="background: #fff4e8"></i><i style="background: #ffe6d2"></i
+            ><i style="background: #f4a261"></i><i style="background: #d9774f"></i
+            ><i style="background: #3b2a22"></i></span
+          ><em>Apricot & Clay</em>
+          <p>
+            Apricot for the good news banner, clay for actions: the "solar warmth" direction in the
+            2026 trend reports, kept muted.
+          </p></a
+        ><a
+          class="gallery-card"
+          href="06-plan-detail.html"
+          style="
+            --card-bg: #fff9e6;
+            --card-primary: #5c3d2e;
+            --card-accent: #f6d776;
+            --card-ink: #3a2a20;
+          "
+          ><span class="num">06</span><strong>Plan detail</strong
+          ><span class="pal"
+            ><i style="background: #fff9e6"></i><i style="background: #fbf0c9"></i
+            ><i style="background: #f6d776"></i><i style="background: #5c3d2e"></i
+            ><i style="background: #3a2a20"></i></span
+          ><em>Butter & Cocoa</em>
+          <p>
+            Cocoa text and buttons on butter: high contrast without a single cold grey, so phone
+            numbers and venue facts read easily outdoors.
+          </p></a
+        ><a
+          class="gallery-card"
+          href="07-hangouts-feedback.html"
+          style="
+            --card-bg: #faf3ee;
+            --card-primary: #b85c5c;
+            --card-accent: #f2c4b3;
+            --card-ink: #3b2b2b;
+          "
+          ><span class="num">07</span><strong>Hangouts: meet again?</strong
+          ><span class="pal"
+            ><i style="background: #faf3ee"></i><i style="background: #fbe4dc"></i
+            ><i style="background: #f2c4b3"></i><i style="background: #b85c5c"></i
+            ><i style="background: #3b2b2b"></i></span
+          ><em>Rose & Oat</em>
+          <p>
+            Dusty rose on oat, from the terracotta + soft pink + cream combination. Gentle enough
+            for a question about people.
+          </p></a
+        ><a
+          class="gallery-card"
+          href="08-graph.html"
+          style="
+            --card-bg: #f5f0e1;
+            --card-primary: #4f6d5a;
+            --card-accent: #c9b98a;
+            --card-ink: #2c332e;
+          "
+          ><span class="num">08</span><strong>Your connections</strong
+          ><span class="pal"
+            ><i style="background: #f5f0e1"></i><i style="background: #e4e9dc"></i
+            ><i style="background: #c9b98a"></i><i style="background: #4f6d5a"></i
+            ><i style="background: #2c332e"></i></span
+          ><em>Moss & Parchment</em>
+          <p>
+            Moss (Hooker's green from the peach + sage set) on parchment. Friend lines are solid
+            moss; fading acquaintances are dashed and lighter.
+          </p></a
+        ><a
+          class="gallery-card"
+          href="09-profile-memories.html"
+          style="
+            --card-bg: #fbf7f0;
+            --card-primary: #b77b4a;
+            --card-accent: #e8d3b5;
+            --card-ink: #3d2e22;
+          "
+          ><span class="num">09</span><strong>Profile: what Convene remembers</strong
+          ><span class="pal"
+            ><i style="background: #fbf7f0"></i><i style="background: #f7ebdb"></i
+            ><i style="background: #e8d3b5"></i><i style="background: #b77b4a"></i
+            ><i style="background: #3d2e22"></i></span
+          ><em>Caramel & Ivory</em>
+          <p>
+            Caramel and ivory, the warm-neutral "new neutrals" direction. Memory cards look like
+            index cards; the editor is the same card opened up.
+          </p></a
+        ><a
+          class="gallery-card"
+          href="10-push-moment.html"
+          style="
+            --card-bg: #fff6f0;
+            --card-primary: #e86f5a;
+            --card-accent: #5a3e4b;
+            --card-ink: #3a2a2e;
+          "
+          ><span class="num">10</span><strong>The push moment</strong
+          ><span class="pal"
+            ><i style="background: #fff6f0"></i><i style="background: #ffe3db"></i
+            ><i style="background: #5a3e4b"></i><i style="background: #e86f5a"></i
+            ><i style="background: #3a2a2e"></i></span
+          ><em>Coral & Cream</em>
+          <p>
+            Coral from the coral-peach set, grounded by plum. The notification is the only saturated
+            element on the screen.
+          </p></a
+        >
+      </div>
+      <section class="sources">
+        <h2>Research sources</h2>
+        <ul>
+          <li>
+            <a
+              href="https://colorpaletteguide.com/terracotta-color-palette/"
+              target="_blank"
+              rel="noreferrer"
+              >Terracotta palette guide: the 60/25/15 rule and "warm whites let it sing"</a
+            >
+          </li>
+          <li>
+            <a
+              href="https://creativebooster.net/blogs/colors/peach-color-palettes"
+              target="_blank"
+              rel="noreferrer"
+              >Peach palettes: peach + cream and peach + sage hex sets</a
+            >
+          </li>
+          <li>
+            <a
+              href="https://macaronsandmimosas.com/green-with-envy-15-sage-palettes/"
+              target="_blank"
+              rel="noreferrer"
+              >Sage green base #9CAF88 and its warm-neutral pairings</a
+            >
+          </li>
+          <li>
+            <a
+              href="https://elements.envato.com/learn/color-scheme-trends-in-mobile-app-design"
+              target="_blank"
+              rel="noreferrer"
+              >2026 mobile app colour trends: warm neutrals and nature-inspired bases</a
+            >
+          </li>
+          <li>
+            <a
+              href="https://elements.envato.com/learn/cute-and-cozy-font-trend"
+              target="_blank"
+              rel="noreferrer"
+              >Cute and cozy fonts: rounded, low-contrast letterforms for warmth</a
+            >
+          </li>
+          <li>
+            <a
+              href="https://updivision.com/blog/post/ui-color-trends-to-watch-in-2026"
+              target="_blank"
+              rel="noreferrer"
+              >UI colour trends 2026: elevated warm neutrals with grounded accents</a
+            >
+          </li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
