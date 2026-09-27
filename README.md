@@ -122,6 +122,13 @@ notifications; filled slots and original planning-date assignments remain. Cance
 already-completed events are unchanged. Existing Google Calendar entries are not updated.
 The script prints the number completed and exits; repeating it does not alter completed events.
 
+To diagnose missing phone notifications, open Profile in the installed app and tap **Send test
+notification**. It registers that device and sends through the deployed server; simulated senders
+are rejected. "Accepted" means the push service accepted delivery, not that the phone displayed it.
+Check Notification Center, Focus, and notification settings if accepted tests remain invisible.
+`pnpm exec tsx scripts/diagnose-push.ts` reads subscription and delivery status from the configured
+database without sending or changing anything; endpoint tokens and encryption keys are omitted.
+
 Past hangouts also offer private overall event feedback, separate from each person's meet-again
 answer. Submitting saves the text immediately (HTTP 202); Next.js `after` starts extraction and
 embedding after the response. You can leave the page; the app's regular state refresh shows when
@@ -132,6 +139,14 @@ offered. Each worker tick handles up to two updates concurrently. Keep the worke
 retry recovery. Repeated submissions do not duplicate memories. Onboarding regeneration preserves
 feedback memories. Apply migrations `0013_event_feedback.sql` and `0014_feedback_memory_jobs.sql`
 with `pnpm migrate` before deploying with `npx vercel@latest --prod`.
+
+Planning builds and selects buckets first, then ranks activities and finds venues for up to four
+finalized groups concurrently. City/date batches retain their original sequential order.
+
+The worker sends a "How was your hangout?" push on its first check after completion, for events
+ended within the last 24 hours. It skips withdrawn participants, cancelled events, and people who
+already submitted event feedback. Tapping this reminder or an older plan notification opens that
+hangout's feedback controls. Apply `0015_feedback_reminders.sql` with `pnpm migrate` before deploying.
 
 Events complete automatically at their end time (derived, no worker needed). Withdrawal is only
 possible before the start; attendance is assumed afterwards.

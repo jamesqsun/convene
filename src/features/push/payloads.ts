@@ -3,7 +3,8 @@
  * number or anything about other participants.
  */
 
-export type NotificationType = 'assignment' | 'participant_left' | 'cancellation' | 'feedback_reminder'
+export type NotificationType =
+  'assignment' | 'participant_left' | 'cancellation' | 'feedback_reminder'
 
 export interface NotifiableEvent {
   id: string

@@ -90,6 +90,19 @@ to reverse later won.
 
 ## Planning pipeline
 
+- **Parallelize finalized groups after selection.** Bucket selection, group partitioning, and
+  proposal persistence finish before external planning starts. Process at most four independent
+  groups concurrently (activity ranking, venue lookup, calendar checks, and atomic commit).
+  Keep city/date batches sequential so multi-day slots retain their existing assignment order.
+  Await all in-flight work before marking a failed batch; preserve outcome order in summaries.
+
+- **End-of-event feedback reminders and links.** Each scheduler tick queues one reminder per
+  active participant for non-cancelled events ended within the preceding 24 hours, excluding
+  submitted event feedback. The unique event/recipient/type key deduplicates ticks; recheck
+  feedback before delivery. This bounded window avoids notifying about all historic seeded events.
+  `/plans/:id` renders the matching completed hangout's feedback controls, with an authorized
+  detail fetch for events outside the 50-item state list. Loading is distinct from unavailable.
+
 - **Manual all-batch sweep.** The secret-authenticated jobs POST accepts `allBatches: true`;
   `planning:run-all` calls the deployed server using worker URL/secret settings. It enumerates
   existing plannable batches and all local dates touched by pending availability after normal

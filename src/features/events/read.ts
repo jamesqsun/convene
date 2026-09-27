@@ -205,7 +205,12 @@ interface HangoutPersonRow {
 }
 
 /** Completed, non-cancelled hangouts with the viewer's own answers and friendship outcomes only. */
-export async function loadHangouts(db: Db, userId: string, now: number, eventId?: string): Promise<Hangout[]> {
+export async function loadHangouts(
+  db: Db,
+  userId: string,
+  now: number,
+  eventId?: string,
+): Promise<Hangout[]> {
   const events = await db.query<HangoutRow>(
     `select e.id, e.ends_at, e.timezone, e.activity_name, coalesce(e.venue->>'name', '') as venue_name,
        ef.text as feedback_text, ef.memories_updated,

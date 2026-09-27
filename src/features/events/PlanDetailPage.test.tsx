@@ -30,6 +30,27 @@ describe('PlanDetailPage', () => {
         </AppStateContext.Provider>,
       )
     expect(render('evt')).toContain('Coffee and conversation')
-    expect(render('missing')).toContain('not available to you')
+    expect(render('missing')).toContain('Loading plan')
+    state.plans = []
+    const ended = {
+      ...state,
+      hangouts: [
+        {
+          eventId: 'evt',
+          endedAt: 0,
+          timezone: 'America/Toronto',
+          activityName: 'Coffee and conversation',
+          venueName: 'Cafe',
+          people: [],
+        },
+      ],
+    }
+    const html = renderToStaticMarkup(
+      <AppStateContext.Provider value={fakeAppState({ state: ended })}>
+        <PlanDetailPage eventId="evt" />
+      </AppStateContext.Provider>,
+    )
+    expect(html).toContain('How was the hangout?')
+    expect(html).not.toContain('not available to you')
   })
 })

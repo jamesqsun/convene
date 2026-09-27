@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { MemoryCard } from '@/features/memories/MemoryCard'
+import { PushTestButton } from '@/features/push/PushTestButton'
 import { MemoryEditor } from '@/features/memories/MemoryEditor'
 import type { Memory } from '@/features/memories/store'
 import { useAppState } from '@/features/state/useAppState'
@@ -66,6 +67,7 @@ export function ProfilePage() {
           Sign out
         </button>
       </div>
+      <PushTestButton />
       <h2 className="font-semibold">What Convene remembers</h2>
       {error && <p className="text-sm text-red-700">{error}</p>}
       {memories === null && <p className="text-sm text-stone-500">Loading…</p>}

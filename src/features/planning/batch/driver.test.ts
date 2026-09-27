@@ -59,6 +59,35 @@ beforeEach(async () => {
 })
 
 describe('runPlanningTick', () => {
+  it('ranks finalized groups in parallel with a cap of four and commits each once', async () => {
+    for (let i = 0; i < 20; i++) await personWithSlot(at(18), at(21))
+    let active = 0,
+      peak = 0,
+      calls = 0
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const ai = {
+      ...providers.ai,
+      async rankActivities(input: Parameters<AiProvider['rankActivities']>[0]) {
+        active++
+        calls++
+        peak = Math.max(peak, active)
+        if (calls === 4) release()
+        await gate
+        const result = await providers.ai.rankActivities(input)
+        active--
+        return result
+      },
+    }
+    const result = await runPlanningTick(deps({ ai }))
+    expect(peak).toBe(4)
+    expect(calls).toBe(5)
+    expect(result.batches[0]!.groups.every((group) => group.status === 'committed')).toBe(true)
+    expect(await count(db, 'events')).toBe(5)
+    expect(await count(db, 'event_participants')).toBe(20)
+  })
   it('manually plans future dates, bypasses catch-up delay, and preserves leases and cutoff', async () => {
     const future = (h: number) =>
       new Date(zonedTime(toronto.timezone, '2026-10-05', h)).toISOString()

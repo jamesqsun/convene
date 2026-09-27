@@ -39,7 +39,12 @@ export function eventRoutes(deps: EventRouteDeps) {
       const plan = await loadPlan(await deps.getDatabase(), userId, eventId(params), deps.clock())
       if (!plan) throw new HttpError(404, 'plan_missing', 'Plan not found')
       if (plan.status === 'scheduled' && plan.endsAt <= deps.clock()) {
-        const [hangout] = await loadHangouts(await deps.getDatabase(), userId, deps.clock(), plan.eventId)
+        const [hangout] = await loadHangouts(
+          await deps.getDatabase(),
+          userId,
+          deps.clock(),
+          plan.eventId,
+        )
         return jsonResponse({ hangout })
       }
       return jsonResponse({ plan })

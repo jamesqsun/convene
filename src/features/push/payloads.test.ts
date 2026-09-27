@@ -26,5 +26,10 @@ describe('notificationPayload', () => {
       '2 people are still going to coffee and conversation on Sat, Oct 3, 6:00 PM.',
     )
     expect(notificationPayload('cancellation', event).title).toBe('Plan cancelled')
+    expect(notificationPayload('feedback_reminder', event)).toMatchObject({
+      title: 'How was your hangout?',
+      url: '/plans/evt-1',
+      tag: 'feedback_reminder:evt-1',
+    })
   })
 })
