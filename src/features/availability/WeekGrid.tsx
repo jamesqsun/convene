@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { addLocalDays, localParts, zonedTime } from '@/lib/time'
 import type { WeekView } from './weeks'
-import { cellKey, cellsForRange, rowClock, rowsPerDay, weekDays } from './week-grid'
+import { cellKey, cellsForRange, lineCells, rowClock, rowsPerDay, weekDays } from './week-grid'
 
 export interface WeekGridProps {
   week: WeekView
@@ -55,7 +55,11 @@ function cellClass(isOn: boolean, overlay: Overlay | undefined, isLocked: boolea
 /** Seven columns of 30-minute cells. Drag across cells to paint or clear availability. */
 export function WeekGrid({ week, selected, onChange }: WeekGridProps) {
   const overlays = overlaysFor(week)
-  const painting = useRef<{ mode: boolean; next: Set<string> } | null>(null)
+  const painting = useRef<{
+    mode: boolean
+    next: Set<string>
+    lastCell: { day: number; row: number } | null
+  } | null>(null)
   const [, forceRender] = useState(0)
   const rowInstant = (day: number, row: number) => {
     const [hour, minuteOfHour] = rowClock(row).split(':').map(Number)
@@ -66,19 +70,29 @@ export function WeekGrid({ week, selected, onChange }: WeekGridProps) {
     return overlays.get(key)?.kind === 'event' || rowInstant(day, row + 1) < week.plannableAfter
   }
 
+  function applyCell(day: number, row: number) {
+    if (!painting.current || isLockedCell(day, row)) return
+    const key = cellKey(day, row)
+    if (painting.current.mode) painting.current.next.add(key)
+    else painting.current.next.delete(key)
+  }
+
   function paint(target: Element | null) {
-    const cell = target?.closest<HTMLElement>('[data-cell]')?.dataset.cell
-    if (!cell || !painting.current) return
-    const { day, row } = { day: Number(cell.split(':')[0]), row: Number(cell.split(':')[1]) }
-    if (isLockedCell(day, row)) return
-    if (painting.current.mode) painting.current.next.add(cell)
-    else painting.current.next.delete(cell)
+    const cellAttr = target?.closest<HTMLElement>('[data-cell]')?.dataset.cell
+    if (!cellAttr || !painting.current) return
+    const [day, row] = cellAttr.split(':').map(Number) as [number, number]
+    const last = painting.current.lastCell
+    // A fast drag can skip pointermove samples entirely; fill every cell swept in between so
+    // painting a whole column works the same at any speed, matching when2meet's drag-select.
+    for (const cell of last ? lineCells(last, { day, row }) : [{ day, row }])
+      applyCell(cell.day, cell.row)
+    painting.current.lastCell = { day, row }
     forceRender((n) => n + 1)
   }
 
   function start(event: React.PointerEvent<HTMLElement>, key: string) {
     if (!(event.target as Element).closest('[data-cell]')) return
-    painting.current = { mode: !selected.has(key), next: new Set(selected) }
+    painting.current = { mode: !selected.has(key), next: new Set(selected), lastCell: null }
     paint(event.target as Element)
   }
 
