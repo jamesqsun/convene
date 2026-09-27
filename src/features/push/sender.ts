@@ -23,9 +23,10 @@ export interface DrainSummary {
 
 interface JobRow {
   id: string
-  event_id: string
+  event_id: string | null
+  prompt_id: string | null
   recipient_id: string
-  type: NotificationType
+  type: NotificationType | 'interest_prompt'
   payload: { remaining?: number }
   attempts: number
 }
@@ -37,20 +38,36 @@ interface SubscriptionRow {
   auth: string
 }
 
-async function claimJobs(db: Db, now: number, limit: number): Promise<JobRow[]> {
+async function claimJobs(db: Db, now: number, limit: number, promptId?: string): Promise<JobRow[]> {
   return db.transaction((tx) =>
     tx.query<JobRow>(
-      `update notification_jobs set attempts = attempts + 1
+      `update notification_jobs set attempts = attempts + 1, next_attempt_at = $1::timestamptz + interval '10 minutes'
        where id in (
          select id from notification_jobs where status = 'pending' and next_attempt_at <= $1::timestamptz
+         and ($3::uuid is null or prompt_id = $3)
          order by next_attempt_at limit $2 for update skip locked)
-       returning id, event_id, recipient_id, type, payload, attempts`,
-      [new Date(now).toISOString(), limit],
+       returning id, event_id, prompt_id, recipient_id, type, payload, attempts`,
+      [new Date(now).toISOString(), limit, promptId ?? null],
     ),
   )
 }
 
 async function payloadFor(db: Db, job: JobRow): Promise<string | null> {
+  if (job.type === 'interest_prompt') {
+    const [prompt] = await db.query<{ text: string }>(
+      `select p.text from interest_prompts p join interest_responses r on r.prompt_id = p.id
+      where p.id = $1 and r.user_id = $2 and r.answer is null`,
+      [job.prompt_id, job.recipient_id],
+    )
+    return prompt
+      ? JSON.stringify({
+          title: 'Interested in this?',
+          body: prompt.text,
+          url: `/interests/${job.prompt_id}`,
+          tag: `interest:${job.prompt_id}`,
+        })
+      : null
+  }
   if (job.type === 'feedback_reminder') {
     const eligible = await db.query(
       `select e.id from events e join event_participants ep on ep.event_id = e.id
@@ -179,8 +196,9 @@ export async function drainNotificationJobs(
   push: PushSender,
   now: number,
   limit = defaultDrainLimit,
+  promptId?: string,
 ): Promise<DrainSummary> {
-  const jobs = await claimJobs(db, now, limit)
+  const jobs = await claimJobs(db, now, limit, promptId)
   const summary: DrainSummary = { claimed: jobs.length, done: 0, retried: 0, failed: 0, retired: 0 }
   for (const job of jobs) {
     const { result, retired } = await deliverJob(db, push, job, now)

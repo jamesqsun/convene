@@ -20,6 +20,7 @@
     "worker": "tsx scripts/worker.ts",
     "planning:run-all": "tsx scripts/run-all-planning.ts",
     "events:complete-all": "tsx scripts/complete-all-events.ts",
+    "interests:send": "tsx scripts/send-interest.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "smoke": "tsx scripts/smoke.ts",

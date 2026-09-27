@@ -15,6 +15,8 @@ export const resetTables = [
   'availability_weeks',
   'notification_deliveries',
   'notification_jobs',
+  'interest_responses',
+  'interest_prompts',
   'push_subscriptions',
   'participant_feedback',
   'event_feedback',

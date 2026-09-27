@@ -194,8 +194,17 @@ to reverse later won.
   extraction because one evidence string is paraphrased, each entry is checked (case and
   whitespace insensitive) and unsupported ones removed.
 - **Regeneration replaces onboarding memories**, including edited ones, after an explicit confirm;
-  memories learned from event feedback are preserved.
+  memories learned from event feedback and interest check-ins are preserved.
   Keeping a per-memory diff would need a suppression list the spec rules out.
+- **Manually broadcast interest check-ins to all active push subscribers.** A secret-protected
+  endpoint snapshots distinct subscribed users and atomically queues one notification per user.
+  A request UUID deduplicates retries. Notification links open private Yes/No responses in the
+  app, compatible with installed iPhone apps; Profile offers a recovery list. Answers are immutable
+  and owner-only. Save first, then embed a precise memory about that topic asynchronously, without
+  generative extraction or broad inferred preferences. Durable claims, five attempts and exponential
+  backoff support worker recovery and manual retry. Existing memories and edits are retained.
+  Notification claims defer eligibility ten minutes to prevent concurrent drains from sending the
+  same pending job while delivery is in progress.
 - **Model-facing schemas are loose, application schemas strict.** OpenAI strict JSON mode rejects
   length and range keywords, so bounds are enforced after parsing. Attributes travel as key/value
   pairs and are stored as an object.

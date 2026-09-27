@@ -122,10 +122,8 @@ notifications; filled slots and original planning-date assignments remain. Cance
 already-completed events are unchanged. Existing Google Calendar entries are not updated.
 The script prints the number completed and exits; repeating it does not alter completed events.
 
-To diagnose missing phone notifications, open Profile in the installed app and tap **Send test
-notification**. It registers that device and sends through the deployed server; simulated senders
-are rejected. "Accepted" means the push service accepted delivery, not that the phone displayed it.
-Check Notification Center, Focus, and notification settings if accepted tests remain invisible.
+To diagnose missing phone notifications, check Notification Center, Focus, and notification settings.
+Push service acceptance does not guarantee that the phone displayed an alert.
 `pnpm exec tsx scripts/diagnose-push.ts` reads subscription and delivery status from the configured
 database without sending or changing anything; endpoint tokens and encryption keys are omitted.
 
@@ -150,6 +148,28 @@ hangout's feedback controls. Apply `0015_feedback_reminders.sql` with `pnpm migr
 
 Events complete automatically at their end time (derived, no worker needed). Withdrawal is only
 possible before the start; attendance is assumed afterwards.
+
+### Broadcast an interest check-in
+
+Apply migration `0016_interest_prompts.sql` with `pnpm migrate`, then deploy with
+`npx vercel@latest --prod`. With `CONVENE_WORKER_URL` pointing to your deployed server and
+`CRON_SECRET` matching its environment, run:
+
+```sh
+pnpm interests:send "Barcelona won the champions league"
+```
+
+The text can be up to 400 characters. This queues a notification for **every user with an
+active push subscription**, delivered to their subscribed devices. The script exits after
+the server accepts the broadcast; delivery continues in the background. Keep the worker
+running for interrupted delivery and memory-update retries. No notifications are generated
+automatically.
+
+Tapping opens a private Yes/No interest check-in; users can also find it under Profile →
+Interest check-ins. Answers save immediately and asynchronously add a memory scoped to that
+exact topic, using the configured embedding provider. Existing memories are preserved, and
+regenerating onboarding memories keeps these responses. Each person can answer only their
+own check-in, once; failed memory processing can be retried without duplicating the memory.
 
 ## Google Cloud setup for calendar sync
 

@@ -59,6 +59,9 @@ export function ProfilePage() {
         <p className="hint mt-1 text-sm">{state?.profile.cityLabel ?? 'No city yet'}</p>
       </header>
       <div className="flex flex-wrap gap-x-4 gap-y-2 text-[13px] font-bold">
+        <a href="/interests" className="link">
+          Interest check-ins
+        </a>
         <a href="/profile/answers" className="link">
           Your answers and regeneration
         </a>

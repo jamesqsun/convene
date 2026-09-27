@@ -5,7 +5,7 @@ import { ApiError, apiFetch } from '@/lib/client-api'
 import { AnswersStep } from './OnboardingSteps'
 import type { Profile } from './store'
 
-/** Raw answers are owner-only. Regeneration preserves memories learned from event feedback. */
+/** Raw answers are owner-only. Regeneration preserves memories learned from feedback and check-ins. */
 export function AnswersPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -32,7 +32,7 @@ export function AnswersPage() {
   async function regenerate() {
     if (
       !window.confirm(
-        'Regenerating replaces memories from your profile answers, including ones you edited. Memories from event feedback are kept. Continue?',
+        'Regenerating replaces memories from your profile answers, including ones you edited. Memories from event feedback and interest check-ins are kept. Continue?',
       )
     )
       return
