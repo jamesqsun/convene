@@ -82,6 +82,13 @@ to reverse later won.
 
 ## Planning pipeline
 
+- **Manual all-batch sweep.** The secret-authenticated jobs POST accepts `allBatches: true`;
+  `planning:run-all` calls the deployed server using worker URL/secret settings. It enumerates
+  existing plannable batches and all local dates touched by pending availability after normal
+  weekly materialization. One pass per city/date bypasses schedule delays and batch retry limits,
+  while preserving real clock cutoff checks, live leases, per-user failure limits, and bookings.
+  It does not extrapolate recurring availability indefinitely. Ordinary worker/cron ticks are unchanged.
+
 - **Time-zone convention follows Postgres** (see Time). Verified by a test that compares
   `local_day_bounds` with the TypeScript bounds across nine zone/date pairs including Havana.
 - **Group remainder rule**: fill toward four; a tail of five is kept whole rather than 4+1, so

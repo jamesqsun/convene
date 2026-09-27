@@ -19,6 +19,21 @@ const post = (authorization?: string) =>
   })
 
 describe('jobs route', () => {
+  it('accepts authenticated all-batches requests and rejects unknown options', async () => {
+    const run = vi.fn(async () => ({}))
+    const handler = jobsHandler(connected, run)
+    const request = (body: unknown, secret = 'a-very-long-random-secret') =>
+      new Request('http://localhost/api/jobs/run', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${secret}` },
+        body: JSON.stringify(body),
+      })
+    expect((await handler(request({ allBatches: true }, 'wrong'), noParams)).status).toBe(401)
+    expect(run).not.toHaveBeenCalled()
+    expect((await handler(request({ allBatches: true }), noParams)).status).toBe(200)
+    expect(run).toHaveBeenCalledWith({ allBatches: true })
+    expect((await handler(request({ force: true }), noParams)).status).toBe(400)
+  })
   it('is hidden in demo mode', async () => {
     const run = vi.fn(async () => ({}))
     expect((await jobsHandler({ mode: 'demo' }, run)(post('Bearer x'), noParams)).status).toBe(404)

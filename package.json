@@ -18,6 +18,7 @@
     "db:reset": "tsx scripts/reset.ts",
     "embeddings:rebuild": "tsx scripts/rebuild-embeddings.ts",
     "worker": "tsx scripts/worker.ts",
+    "planning:run-all": "tsx scripts/run-all-planning.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "smoke": "tsx scripts/smoke.ts",

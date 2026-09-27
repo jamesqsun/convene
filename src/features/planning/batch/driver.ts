@@ -33,6 +33,7 @@ import {
   expireDeadSlots,
   finishBatch,
   listBatchStates,
+  listAllPlannableBatches,
   listCityClocks,
   listPlannedProposals,
   loadCityContext,
@@ -94,7 +95,10 @@ function calendarDeps(deps: DriverDeps): SyncDeps | null {
   return provider ? { db: deps.db, provider, tokenSecret: deps.tokenSecret } : null
 }
 
-export async function runPlanningTick(deps: DriverDeps): Promise<TickSummary> {
+export async function runPlanningTick(
+  deps: DriverDeps,
+  options: { allBatches?: boolean } = {},
+): Promise<TickSummary> {
   const now = deps.clock()
   const expiredSlots = await expireDeadSlots(deps.db, now)
   const weeksCarriedForward = (await materializeWeeks(deps.db, now)).weeks
@@ -107,8 +111,11 @@ export async function runPlanningTick(deps: DriverDeps): Promise<TickSummary> {
     cities.map((city) => targetDateFor(city, now)),
   )
   const batches: BatchSummary[] = []
-  for (const due of dueBatches(cities, states, now)) {
-    const batch = await claimBatch(deps.db, due, now, deps.workerId)
+  const candidates = options.allBatches
+    ? await listAllPlannableBatches(deps.db, now)
+    : dueBatches(cities, states, now)
+  for (const due of candidates) {
+    const batch = await claimBatch(deps.db, due, deps.clock(), deps.workerId)
     if (batch) batches.push(await runBatch(deps, batch))
   }
   if (calendar) {

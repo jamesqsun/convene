@@ -101,6 +101,18 @@ CONVENE_SMOKE_URL=http://localhost:3005 pnpm smoke
    targets, refreshes connected calendars that are more than thirty minutes stale, and mirrors new
    and cancelled hangouts into people's Convene calendars.
 
+To manually plan all future availability without waiting for scheduled batches, deploy the latest
+server code, set `CONVENE_WORKER_URL` to your Vercel URL and `CRON_SECRET` to the same secret as
+Vercel in `.env.local`, then run `pnpm planning:run-all`. This sends an authenticated POST to
+`/api/jobs/run` with `{ "allBatches": true }`. All processing uses the server's providers and database.
+It runs one pass per existing plannable batch or city/date with pending availability, including
+future dates and immediate catch-up. It retains the 48-hour cutoff, live leases, calendar checks,
+and assignment constraints; existing hangouts are preserved. Manual runs can retry exhausted
+batches, but retain per-person failed-group limits. It also runs normal maintenance, calendar
+sync, and notifications. It does not generate unlimited future recurring weeks. Large sweeps
+remain subject to Vercel's request duration limit. The command prints the full summary and exits
+nonzero for HTTP errors or reported batch/group failures.
+
 Events complete automatically at their end time (derived, no worker needed). Withdrawal is only
 possible before the start; attendance is assumed afterwards.
 

@@ -1,5 +1,6 @@
 import type { Db } from '@/lib/db'
 import { type DayBounds, minute } from '@/lib/time'
+import { isDateStillPlannable } from './due'
 import type { HistorySnapshot } from '../buckets/reconnection'
 import type { BucketMember, ProfileSnapshot, SlotRow, UserId } from '../types'
 import type { CityContext } from '../venues/provider'
@@ -53,6 +54,34 @@ export async function listCityClocks(db: Db): Promise<CityClock[]> {
      order by city_key`,
   )
   return rows.map((row) => ({ cityKey: row.city_key, timezone: row.city_timezone }))
+}
+
+/** Finite manual sweep: existing batches and every local day touched by pending availability. */
+export async function listAllPlannableBatches(db: Db, now: number): Promise<DueBatch[]> {
+  const rows = await db.query<{ city_key: string; timezone: string; local_date: string }>(
+    `select city_key, timezone, local_date::text from (
+       select p.city_key, p.city_timezone as timezone, days.day::date as local_date
+       from availability_slots s join profiles p on p.id = s.user_id
+       cross join lateral generate_series(
+         (greatest(s.starts_at, $1::timestamptz) at time zone p.city_timezone)::date::timestamp,
+         ((s.ends_at - interval '1 microsecond') at time zone p.city_timezone)::date::timestamp,
+         interval '1 day'
+       ) as days(day)
+       where s.status = 'pending' and s.ends_at > $1::timestamptz
+         and p.onboarding_completed_at is not null and p.city_key is not null
+       union
+       select city_key, timezone, local_date from planning_batches
+     ) candidates order by local_date, city_key`,
+    [new Date(now).toISOString()],
+  )
+  return rows
+    .filter((row) => isDateStillPlannable(row.timezone, row.local_date, now))
+    .map((row) => ({
+      cityKey: row.city_key,
+      timezone: row.timezone,
+      localDate: row.local_date,
+      kind: 'main',
+    }))
 }
 
 export async function listBatchStates(

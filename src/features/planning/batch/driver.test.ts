@@ -59,6 +59,31 @@ beforeEach(async () => {
 })
 
 describe('runPlanningTick', () => {
+  it('manually plans future dates, bypasses catch-up delay, and preserves leases and cutoff', async () => {
+    const future = (h: number) =>
+      new Date(zonedTime(toronto.timezone, '2026-10-05', h)).toISOString()
+    await personWithSlot(future(18), future(21))
+    await personWithSlot(future(18), future(21))
+    await personWithSlot(at(18), at(21))
+    await personWithSlot(at(18), at(21))
+    await runPlanningTick(deps())
+    expect(await count(db, 'events')).toBe(1)
+    await personWithSlot(at(18), at(21))
+    await personWithSlot(at(18), at(21))
+    const early = new Date(clock + hour).toISOString()
+    const earlyEnd = new Date(clock + 3 * hour).toISOString()
+    await personWithSlot(early, earlyEnd)
+    await personWithSlot(early, earlyEnd)
+    const manual = await runPlanningTick(deps(), { allBatches: true })
+    expect(manual.batches.map((batch) => batch.localDate)).toEqual([wednesday, '2026-10-05'])
+    expect(await count(db, 'events')).toBe(3)
+    await runPlanningTick(deps(), { allBatches: true })
+    expect(await count(db, 'events')).toBe(3)
+    await db.query("update planning_batches set status = 'running', lease_expires_at = $1", [
+      new Date(clock + hour).toISOString(),
+    ])
+    expect((await runPlanningTick(deps(), { allBatches: true })).batches).toEqual([])
+  })
   it('books a group at the main batch, is idempotent, and picks up late arrivals in catch-up', async () => {
     const people = [] as string[]
     for (let i = 0; i < 4; i += 1) people.push(await personWithSlot(at(18), at(21)))
