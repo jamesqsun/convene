@@ -193,6 +193,12 @@ to reverse later won.
   evening window is too short to overlap anyone by an hour, so the demo shows an unmatched slot.
 - **History is inserted directly**, bypassing the batch driver, with committed proposals so every
   foreign key holds and the feedback transaction creates the friendships the normal way.
+- **Generated people come from fixed lists, not a model** (added 2026-09-27). `pnpm seed --people N`
+  builds each person from a seeded random choice of one prepared answer per prompt, and each answer
+  carries the memory it supports, so evidence is verbatim by construction. Person `i` is the same
+  for every `N`, which makes reruns updates. It is a flag on the existing seed, and it reuses
+  `seedDemoWorld`, so generated people take the same path as the cast. Generated people only get
+  past hangouts and availability; upcoming plans are left to the real planner.
 
 ## After the first end-to-end round
 

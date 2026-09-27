@@ -159,6 +159,14 @@ possible before the start; attendance is assumed afterwards.
    pnpm seed
    ```
 
+   For a fuller pool, `pnpm seed --people 200` also adds that many generated people (up to 1000)
+   in Toronto and Vancouver, each with answers, memories, and availability, plus one past hangout
+   per three people with feedback and friendships. They are fictional (`@convene.demo`, 555
+   numbers), sign in with `SEED_PASSWORD`, and are planned like anyone else, so the next batch
+   makes a model and venue request for each group it forms. Their ids are fixed: running it again
+   updates the same people. On Node 20, prefix `pnpm seed` and `pnpm db:reset` with
+   `NODE_OPTIONS=--experimental-websocket`.
+
 4. Run the app and, in a second terminal, the scheduler:
 
    ```sh
