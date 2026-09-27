@@ -1,7 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { apiFetch } from '@/lib/client-api'
+import { PastHangoutsSection } from '@/features/feedback/PastHangoutsSection'
+import type { Hangout, Plan } from './read'
 import { useAppState } from '@/features/state/useAppState'
 import { PlanDetail } from './PlanDetail'
 
@@ -9,7 +12,22 @@ import { PlanDetail } from './PlanDetail'
 export function PlanDetailPage({ eventId }: { eventId: string }) {
   const { state } = useAppState()
   const [notice, setNotice] = useState<string | null>(null)
+  const [fetched, setFetched] = useState<{ eventId: string; plan?: Plan; hangout?: Hangout; error?: string } | null>(null)
   const plan = state?.plans.find((candidate) => candidate.eventId === eventId)
+  const hangout = state?.hangouts.find((candidate) => candidate.eventId === eventId)
+  useEffect(() => {
+    if (!state || plan || hangout) return
+    let active = true
+    apiFetch<{ plan?: Plan; hangout?: Hangout }>(`/api/plans/${encodeURIComponent(eventId)}`)
+      .then((result) => { if (active) setFetched({ eventId, ...result }) })
+      .catch(() => { if (active) setFetched({ eventId, error: 'This plan is not available to you, or it has been removed.' }) })
+    return () => { active = false }
+  }, [eventId, state, plan, hangout])
+  const detail = fetched?.eventId === eventId ? fetched : null
+  const past = hangout ?? detail?.hangout
+  if (past) return <section className="space-y-4"><Link href="/plans" className="text-sm underline">Back to plans</Link><PastHangoutsSection hangouts={[past]} /></section>
+  if (!state || (!plan && !detail)) return <p className="text-sm text-stone-600">Loading plan…</p>
+  const current = plan ?? detail?.plan
   if (notice) {
     return (
       <section>
@@ -20,7 +38,7 @@ export function PlanDetailPage({ eventId }: { eventId: string }) {
       </section>
     )
   }
-  if (!plan) {
+  if (!current) {
     return (
       <section>
         <p className="text-sm text-stone-600">
@@ -32,5 +50,5 @@ export function PlanDetailPage({ eventId }: { eventId: string }) {
       </section>
     )
   }
-  return <PlanDetail plan={plan} onWithdrawn={setNotice} />
+  return <PlanDetail plan={current} onWithdrawn={setNotice} />
 }

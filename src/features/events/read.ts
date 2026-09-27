@@ -205,7 +205,7 @@ interface HangoutPersonRow {
 }
 
 /** Completed, non-cancelled hangouts with the viewer's own answers and friendship outcomes only. */
-export async function loadHangouts(db: Db, userId: string, now: number): Promise<Hangout[]> {
+export async function loadHangouts(db: Db, userId: string, now: number, eventId?: string): Promise<Hangout[]> {
   const events = await db.query<HangoutRow>(
     `select e.id, e.ends_at, e.timezone, e.activity_name, coalesce(e.venue->>'name', '') as venue_name,
        ef.text as feedback_text, ef.memories_updated,
@@ -214,8 +214,9 @@ export async function loadHangouts(db: Db, userId: string, now: number): Promise
      join event_participants me on me.event_id = e.id and me.user_id = $1 and me.withdrawn_at is null
      left join event_feedback ef on ef.event_id = e.id and ef.user_id = $1
      where e.status = 'scheduled' and e.ends_at <= $2::timestamptz
+       and ($3::uuid is null or e.id = $3::uuid)
      order by e.ends_at desc limit 50`,
-    [userId, new Date(now).toISOString()],
+    [userId, new Date(now).toISOString(), eventId ?? null],
   )
   if (events.length === 0) return []
   const people = await db.query<HangoutPersonRow>(

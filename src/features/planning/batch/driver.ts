@@ -1,4 +1,5 @@
 import { materializeWeeks } from '@/features/availability/weeks'
+import { enqueueFeedbackReminders } from '@/features/push/reminders'
 import { listBusyBlocks } from '@/features/calendar/store'
 import {
   type SyncDeps,
@@ -123,6 +124,7 @@ export async function runPlanningTick(
     calendars.entriesCreated = entries.created
     calendars.entriesRemoved = entries.removed
   }
+  await enqueueFeedbackReminders(deps.db, deps.clock())
   const notifications = await drainNotificationJobs(deps.db, deps.providers.push, deps.clock())
   return { expiredSlots, weeksCarriedForward, calendars, batches, notifications }
 }

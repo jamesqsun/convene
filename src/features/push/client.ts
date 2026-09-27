@@ -23,24 +23,33 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 }
 
 /** Subscribes this device (after permission) and records it on the server. */
-export async function subscribeThisDevice(): Promise<'subscribed' | 'denied' | 'unavailable'> {
-  const { publicKey } = await apiFetch<{ publicKey: string | null }>('/api/push/public-key')
-  if (!publicKey) return 'unavailable'
+export async function subscribeThisDevice(): Promise<
+  'subscribed' | 'denied' | 'unavailable' | 'not-configured'
+> {
+  if (!isPushSupported()) return 'unavailable'
+  // iOS requires this call directly from the button tap, before any network await.
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') return 'denied'
-  const registration = await registerServiceWorker()
-  const subscription = await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
-  })
+  const { publicKey } = await apiFetch<{ publicKey: string | null }>('/api/push/public-key')
+  if (!publicKey) return 'not-configured'
+  await registerServiceWorker()
+  const registration = await navigator.serviceWorker.ready
+  const subscription =
+    (await registration.pushManager.getSubscription()) ??
+    (await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
+    }))
   await apiFetch('/api/push/subscriptions', { method: 'POST', body: subscription.toJSON() })
   return 'subscribed'
 }
 
 /** Keeps the server's copy fresh for devices that already granted permission. */
-export async function syncExistingSubscription(): Promise<void> {
-  const registration = await registerServiceWorker()
+export async function syncExistingSubscription(): Promise<boolean> {
+  await registerServiceWorker()
+  const registration = await navigator.serviceWorker.ready
   const subscription = await registration.pushManager.getSubscription()
   if (subscription)
     await apiFetch('/api/push/subscriptions', { method: 'POST', body: subscription.toJSON() })
+  return subscription !== null
 }

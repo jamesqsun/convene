@@ -3,7 +3,7 @@
  * number or anything about other participants.
  */
 
-export type NotificationType = 'assignment' | 'participant_left' | 'cancellation'
+export type NotificationType = 'assignment' | 'participant_left' | 'cancellation' | 'feedback_reminder'
 
 export interface NotifiableEvent {
   id: string
@@ -40,6 +40,13 @@ export function notificationPayload(
   const url = `/plans/${event.id}`
   const tag = `${type}:${event.id}`
   switch (type) {
+    case 'feedback_reminder':
+      return {
+        title: 'How was your hangout?',
+        body: `Share your feedback on ${event.activityName} and tell us who you would like to meet again.`,
+        url,
+        tag,
+      }
     case 'assignment':
       return {
         title: `Plan assigned: ${event.activityName}`,

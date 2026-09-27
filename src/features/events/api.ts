@@ -13,7 +13,7 @@ import { drainNotificationJobs } from '@/features/push/sender'
 import { type Db, getDb } from '@/lib/db'
 import { HttpError, type RouteHandler, jsonResponse } from '@/lib/http'
 import { getProviders } from '@/lib/providers'
-import { loadPlan } from './read'
+import { loadHangouts, loadPlan } from './read'
 import { withdrawFromEvent } from './withdraw'
 
 export interface EventRouteDeps {
@@ -38,6 +38,10 @@ export function eventRoutes(deps: EventRouteDeps) {
     detail: authed<{ eventId: string }>(async (_request, userId, params) => {
       const plan = await loadPlan(await deps.getDatabase(), userId, eventId(params), deps.clock())
       if (!plan) throw new HttpError(404, 'plan_missing', 'Plan not found')
+      if (plan.status === 'scheduled' && plan.endsAt <= deps.clock()) {
+        const [hangout] = await loadHangouts(await deps.getDatabase(), userId, deps.clock(), plan.eventId)
+        return jsonResponse({ hangout })
+      }
       return jsonResponse({ plan })
     }, deps.getProvider),
     withdraw: authedMutation<{ eventId: string }>(async (_request, userId, params) => {
