@@ -243,6 +243,17 @@ makes billable Muse calls; automated tests use stubbed search results.
    updates the same people. On Node 20, prefix `pnpm seed` and `pnpm db:reset` with
    `NODE_OPTIONS=--experimental-websocket`.
 
+   For a live demonstration, `pnpm seed:demo --yes` applies any pending migrations, **deletes
+   every account and all data**, then seeds the same twenty-five fully onboarded people in Atlanta
+   each time, with dates relative to today. Without `--yes` it only reports what it would apply
+   and delete. It needs no Node prefix. When it finishes it prints the steps: sign up, choose
+   Atlanta, add two or more hours of availability on one of the listed days, then
+   `pnpm planning:run-all` to be matched into a group of four or five,
+   `pnpm events:complete-all` to finish the hangout, and `pnpm interests:send` or
+   `pnpm interests:discover` for an interest check-in. A newcomer's own friend graph stays empty,
+   because fictional people never answer about them; sign in as the printed showcase account to
+   show a full graph.
+
 4. Run the app and, in a second terminal, the scheduler:
 
    ```sh

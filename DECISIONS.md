@@ -76,6 +76,12 @@ to reverse later won.
   events ended within 24 hours), then starts post-response delivery without requiring a worker tick.
   Only obsolete non-feedback jobs are settled; reminders remain eligible for durable worker retries.
 
+- **Trigger functions reachable from an Auth delete pin `search_path`** (migration 0013, added
+  2026-09-27). Supabase Auth deletes users as a role whose `search_path` is `auth`, and the delete
+  cascades into `public`. A trigger that names a table without its schema then fails with
+  `relation does not exist`, which Auth reports only as "Database error deleting user". PGlite
+  does not reproduce this unless the test sets `search_path = auth` first.
+
 - **Event completion is derived**, never stored: `status = 'scheduled' and ends_at <= now()`. The
   spec ties feedback eligibility and recency to the end timestamp regardless of when a worker runs,
   so a stored "completed" flag would only add a race.
@@ -256,6 +262,20 @@ to reverse later won.
   for every `N`, which makes reruns updates. It is a flag on the existing seed, and it reuses
   `seedDemoWorld`, so generated people take the same path as the cast. Generated people only get
   past hangouts and availability; upcoming plans are left to the real planner.
+- **The demo cast is free in blocks of three or four** (`pnpm seed:demo`, added 2026-09-27). The
+  partition keeps up to five people whole and splits six into four and two, so a newcomer joining
+  a block always lands in one whole group of four or five. Blocks on a day touch but never
+  overlap: if they did, greedy selection would take the larger seeded-only bucket first and could
+  leave the newcomer unmatched. Blocks start three days out, which clears the 48-hour cutoff at
+  any time of day. A test runs the real planner over the cast with a newcomer to hold this.
+- **The demo seed wipes through SQL, not the Auth API.** `wipeWorld` truncates the reset table
+  list and deletes `auth.users` in one transaction as the database owner. Deleting users through
+  the Auth API failed on the hosted project for a reason its generic error did not reveal, and
+  could not share a transaction with the rest. Accounts are created through the Auth admin
+  endpoint with `fetch`, because the Supabase client cannot be constructed on Node 20.
+- **The friend graph is demonstrated from a seeded account.** The user chose this over having
+  fictional co-participants answer "meet again" about a newcomer. The first generated person has
+  four hangouts with three different people each, all mutual, for twelve friends.
 
 ## After the first end-to-end round
 
