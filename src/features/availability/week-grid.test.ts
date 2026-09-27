@@ -5,6 +5,7 @@ import {
   cellsForRange,
   isSameSelection,
   isWeekStart,
+  lineCells,
   rowClock,
   rowsPerDay,
   selectionFromRanges,
@@ -58,5 +59,28 @@ describe('week grid', () => {
   it('compares selections', () => {
     expect(isSameSelection(new Set(['0:1']), new Set(['0:1']))).toBe(true)
     expect(isSameSelection(new Set(['0:1']), new Set(['0:2']))).toBe(false)
+  })
+
+  it('fills every cell a fast drag would have swept, not just the endpoints', () => {
+    // A quick swipe straight down one day column: every row in between must be included.
+    expect(lineCells({ day: 2, row: 3 }, { day: 2, row: 7 })).toEqual([
+      { day: 2, row: 3 },
+      { day: 2, row: 4 },
+      { day: 2, row: 5 },
+      { day: 2, row: 6 },
+      { day: 2, row: 7 },
+    ])
+    // Same cell twice (no movement) still yields that one cell.
+    expect(lineCells({ day: 1, row: 1 }, { day: 1, row: 1 })).toEqual([{ day: 1, row: 1 }])
+    // A diagonal jump interpolates day and row together rather than skipping either.
+    expect(lineCells({ day: 0, row: 0 }, { day: 2, row: 2 })).toEqual([
+      { day: 0, row: 0 },
+      { day: 1, row: 1 },
+      { day: 2, row: 2 },
+    ])
+    // Direction is symmetric: walking backwards retraces the same cells in reverse.
+    expect(lineCells({ day: 2, row: 7 }, { day: 2, row: 3 })).toEqual(
+      [...lineCells({ day: 2, row: 3 }, { day: 2, row: 7 })].reverse(),
+    )
   })
 })

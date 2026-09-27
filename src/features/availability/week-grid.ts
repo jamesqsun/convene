@@ -27,6 +27,40 @@ export function cellKey(day: number, row: number): string {
   return `${day}:${row}`
 }
 
+/**
+ * Every grid cell on the straight line between two cells, inclusive of both ends (Bresenham).
+ * A fast drag only fires a pointermove every few cells, so painting must fill the cells the
+ * pointer swept between two samples rather than just the one it landed on, the way when2meet's
+ * grid does not lose cells under a quick swipe.
+ */
+export function lineCells(
+  from: { day: number; row: number },
+  to: { day: number; row: number },
+): { day: number; row: number }[] {
+  const cells: { day: number; row: number }[] = []
+  let x = from.day
+  let y = from.row
+  const dx = Math.abs(to.day - from.day)
+  const dy = -Math.abs(to.row - from.row)
+  const stepX = x < to.day ? 1 : -1
+  const stepY = y < to.row ? 1 : -1
+  let err = dx + dy
+  for (;;) {
+    cells.push({ day: x, row: y })
+    if (x === to.day && y === to.row) break
+    const doubledErr = 2 * err
+    if (doubledErr >= dy) {
+      err += dy
+      x += stepX
+    }
+    if (doubledErr <= dx) {
+      err += dx
+      y += stepY
+    }
+  }
+  return cells
+}
+
 export function parseCellKey(key: string): { day: number; row: number } {
   const [day, row] = key.split(':').map(Number)
   return { day: day!, row: row! }
