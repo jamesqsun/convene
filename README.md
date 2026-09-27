@@ -120,7 +120,9 @@ after deploying the latest server code. It uses `CONVENE_WORKER_URL` and `CRON_S
 preserving duration, and unlocks feedback. It releases future reservations and settles queued
 notifications; filled slots and original planning-date assignments remain. Cancelled and
 already-completed events are unchanged. Existing Google Calendar entries are not updated.
-The script prints the number completed and exits; repeating it does not alter completed events.
+The script queues feedback reminders and starts background push delivery, then prints the number
+completed and exits. The worker retries failed deliveries. Repeating it does not alter completed
+events or duplicate reminders; it also catches missing reminders for events ended in the past 24 hours.
 
 To diagnose missing phone notifications, check Notification Center, Focus, and notification settings.
 Push service acceptance does not guarantee that the phone displayed an alert.
@@ -167,7 +169,8 @@ automatically.
 
 Tapping opens a private Yes/No interest check-in; users can also find it under Profile →
 Interest check-ins. Answers save immediately and asynchronously add a memory scoped to that
-exact topic, using the configured embedding provider. Existing memories are preserved, and
+exact topic, using the same AI memory extraction as profile answers and the configured embedding
+provider. Existing memories are preserved, and
 regenerating onboarding memories keeps these responses. Each person can answer only their
 own check-in, once; failed memory processing can be retried without duplicating the memory.
 

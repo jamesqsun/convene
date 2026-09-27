@@ -72,6 +72,9 @@ to reverse later won.
   replanning; original proposed times remain in planning proposals. Cancelled and already-ended
   events are untouched. Completion and feedback still use the existing timestamp semantics.
   Previously mirrored Google Calendar entries are not rewritten by this manual command.
+  Completion atomically queues the normal feedback reminders (including missing reminders for
+  events ended within 24 hours), then starts post-response delivery without requiring a worker tick.
+  Only obsolete non-feedback jobs are settled; reminders remain eligible for durable worker retries.
 
 - **Event completion is derived**, never stored: `status = 'scheduled' and ends_at <= now()`. The
   spec ties feedback eligibility and recency to the end timestamp regardless of when a worker runs,
@@ -200,8 +203,10 @@ to reverse later won.
   endpoint snapshots distinct subscribed users and atomically queues one notification per user.
   A request UUID deduplicates retries. Notification links open private Yes/No responses in the
   app, compatible with installed iPhone apps; Profile offers a recovery list. Answers are immutable
-  and owner-only. Save first, then embed a precise memory about that topic asynchronously, without
-  generative extraction or broad inferred preferences. Durable claims, five attempts and exponential
+  and owner-only. Save first, then use the same AI extraction, strict validation, evidence filtering,
+  and embedding path as profile answers asynchronously. Turn the topic and Yes/No into an explicit
+  interested/not-interested answer; request descriptive preference topics with narrow inference,
+  rather than a generic response log. Durable claims, five attempts and exponential
   backoff support worker recovery and manual retry. Existing memories and edits are retained.
   Notification claims defer eligibility ten minutes to prevent concurrent drains from sending the
   same pending job while delivery is in progress.

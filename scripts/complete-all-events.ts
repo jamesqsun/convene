@@ -17,6 +17,7 @@ async function main(): Promise<void> {
   const body = await response.text()
   if (!response.ok) throw new Error(`Server returned ${response.status}: ${body}`)
   console.log(JSON.stringify(JSON.parse(body), null, 2))
+  console.log('Feedback reminders are queued; notification delivery continues in the background.')
 }
 
 main().catch((error) => {

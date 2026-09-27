@@ -24,16 +24,19 @@ describe('manual completion endpoint', () => {
     expect((await completeEventsHandler({ mode: 'demo' }, run)(request(), noParams)).status).toBe(
       404,
     )
-    const handler = completeEventsHandler(env, run)
+    const scheduleDelivery = vi.fn()
+    const handler = completeEventsHandler(env, run, scheduleDelivery)
     expect((await handler(request(), noParams)).status).toBe(401)
     expect((await handler(request('wrong'), noParams)).status).toBe(401)
     expect(
       (await handler(request('a-very-long-random-secret', '{"extra":true}'), noParams)).status,
     ).toBe(400)
     expect(run).not.toHaveBeenCalled()
+    expect(scheduleDelivery).not.toHaveBeenCalled()
     const response = await handler(request('a-very-long-random-secret'), noParams)
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({ completed: 3 })
     expect(run).toHaveBeenCalledTimes(1)
+    expect(scheduleDelivery).toHaveBeenCalledTimes(1)
   })
 })

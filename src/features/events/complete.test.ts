@@ -8,6 +8,8 @@ import {
 } from '../../../supabase/tests/harness'
 import { completeAllEvents } from './complete'
 import { loadHangouts, loadPlans } from './read'
+import { fakePushSender } from '@/features/push/fake'
+import { drainNotificationJobs } from '@/features/push/sender'
 
 it('completes future and ongoing events, unlocks feedback, and is idempotent', async () => {
   const db = await createTestDb()
@@ -59,7 +61,30 @@ it('completes future and ongoing events, unlocks feedback, and is idempotent', a
   expect(await count(db, 'participant_reservations', 'event_id = $1', [future])).toBe(0)
   expect(await count(db, 'user_date_assignments', 'event_id = $1', [future])).toBe(2)
   expect(
-    await count(db, 'notification_jobs', "event_id = $1 and status = 'pending'", [future]),
-  ).toBe(0)
+    await count(
+      db,
+      'notification_jobs',
+      "event_id = $1 and status = 'pending' and type = 'feedback_reminder'",
+      [future],
+    ),
+  ).toBe(2)
+  await db.query(
+    "insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, 'https://push/completion', 'k', 'a')",
+    [a],
+  )
   expect(await completeAllEvents(db, now + 1000)).toEqual({ completed: 0 })
+  const push = fakePushSender()
+  await drainNotificationJobs(db, push, now + 1000)
+  const reminders = push.sent
+    .map((entry) => JSON.parse(entry.payload))
+    .filter((entry) => entry.tag === `feedback_reminder:${future}`)
+  expect(reminders).toHaveLength(1)
+  expect(reminders[0]).toMatchObject({ title: 'How was your hangout?', url: `/plans/${future}` })
+  await completeAllEvents(db, now + 2000)
+  await drainNotificationJobs(db, push, now + 2000)
+  expect(
+    push.sent
+      .map((entry) => JSON.parse(entry.payload))
+      .filter((entry) => entry.tag === `feedback_reminder:${future}`),
+  ).toHaveLength(1)
 })

@@ -1,4 +1,5 @@
 import type { Db } from '@/lib/db'
+import { enqueueFeedbackReminders } from '@/features/push/reminders'
 
 /** Manual completion uses the same timestamp-based semantics as natural completion. */
 export async function completeAllEvents(db: Db, now: number): Promise<{ completed: number }> {
@@ -17,9 +18,10 @@ export async function completeAllEvents(db: Db, now: number): Promise<{ complete
     await tx.query(
       `update notification_jobs set status = 'done', finished_at = $2::timestamptz,
          last_error = 'event_manually_completed'
-       where event_id = any($1::uuid[]) and status = 'pending'`,
+       where event_id = any($1::uuid[]) and status = 'pending' and type <> 'feedback_reminder'`,
       [ids, new Date(now).toISOString()],
     )
+    await enqueueFeedbackReminders(tx, now)
     return { completed: ids.length }
   })
 }
