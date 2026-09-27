@@ -3,11 +3,11 @@
 /* Sage & Linen (mockups/04-availability.html). The -deep and -soft shades are the same hues
    deepened or tinted so small text passes WCAG AA; see DECISIONS.md. */
 @theme {
-  --color-linen: #f4f1ea;
+  --color-linen: #f5f5f5;
   --color-surface: #ffffff;
   --color-ink: #2e332a;
   --color-muted: #6b6f64;
-  --color-line: #e3e0d6;
+  --color-line: #e4e4e4;
   --color-sage: #6f8c5e;
   --color-sage-deep: #56704a;
   --color-soft: #e7eedf;
@@ -198,6 +198,42 @@ body {
   .graph-edge,
   .graph-node,
   .graph-pulse {
+    animation: none;
+  }
+}
+
+/* Onboarding loading (src/features/profile/OnboardingPage.tsx). */
+.onboarding-bar {
+  animation: onboarding-bar 1.6s ease-in-out infinite;
+}
+
+.onboarding-fade {
+  animation: onboarding-fade 0.5s ease-out;
+}
+
+@keyframes onboarding-bar {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+@keyframes onboarding-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-bar {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+  .onboarding-fade {
     animation: none;
   }
 }

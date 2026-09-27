@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Spinner } from '@/features/shell/Spinner'
 import { ApiError, apiFetch } from '@/lib/client-api'
 import { AnswersStep, BasicsStep, CityStep, InterestsStep, PhoneStep } from './OnboardingSteps'
 import type { OnboardingStep } from './onboarding-step'
@@ -77,8 +78,10 @@ export function OnboardingPage() {
     }
   }
 
-  if (!profile)
-    return <p className="mx-auto max-w-xl text-sm text-muted md:pt-6">{error ?? 'Loading…'}</p>
+  if (!profile) {
+    if (error) return <p className="mx-auto max-w-xl text-sm text-clay-deep md:pt-6">{error}</p>
+    return <OnboardingSkeleton />
+  }
   const step = profile.onboardingStep
   const index = stepperSteps.findIndex((s) => s.step === step)
   const current = index === -1 ? stepperSteps.length : index
@@ -149,10 +152,14 @@ function GenerationStatus({
   result: GenerateResult | 'pending' | null
   onRetry: () => void
 }) {
-  if (result === null || result === 'pending')
-    return <p className="text-muted">Turning your answers into memories…</p>
+  if (result === null || result === 'pending') return <BuildingMemories />
   if (result.status === 'ok')
-    return <p className="font-bold text-sage-deep">Done. Taking you to your availability.</p>
+    return (
+      <p role="status" className="flex items-center gap-2 font-bold text-sage-deep">
+        <Spinner />
+        Done. Taking you to your availability.
+      </p>
+    )
   return (
     <div className="space-y-3 rounded-2xl bg-clay-soft p-4">
       <p className="text-sm font-bold text-clay-deep">{result.notice}</p>
@@ -164,6 +171,83 @@ function GenerationStatus({
           Continue anyway
         </a>
       </div>
+    </div>
+  )
+}
+
+/** The page's shape in soft placeholders while the profile loads, so nothing jumps in later. */
+export function OnboardingSkeleton() {
+  return (
+    <section className="mx-auto max-w-xl" aria-busy="true">
+      <p className="sr-only" role="status">
+        Loading…
+      </p>
+      <div aria-hidden="true" className="motion-safe:animate-pulse">
+        <div className="flex justify-between gap-1.5 md:justify-start md:gap-7">
+          {stepperSteps.map(({ step }) => (
+            <div key={step} className="flex flex-col items-center gap-1 md:flex-row md:gap-2">
+              <span className="size-6 rounded-full bg-line" />
+              <span className="h-2.5 w-10 rounded-full bg-line" />
+            </div>
+          ))}
+        </div>
+        <div className="mt-7 h-2.5 w-20 rounded-full bg-line md:mt-9" />
+        <div className="mt-3 h-8 w-3/4 rounded-xl bg-line" />
+        <div className="mt-7 h-3 w-24 rounded-full bg-line" />
+        <div className="mt-2 h-11 rounded-xl bg-surface ring-1 ring-line" />
+        <div className="mt-5 h-3 w-16 rounded-full bg-line" />
+        <div className="mt-2 h-11 rounded-xl bg-surface ring-1 ring-line" />
+        <div className="mt-6 h-11 rounded-[14px] bg-sage/30" />
+      </div>
+    </section>
+  )
+}
+
+const buildingSteps = [
+  'Reading your answers',
+  'Noticing what you enjoy',
+  'Writing your memories',
+  'Almost there',
+]
+
+/**
+ * Shown while memories are generated, which can take several seconds: a breathing mark, an
+ * indeterminate bar, and a status line that walks through the work. Only the heading is
+ * announced; the rotating line is decorative.
+ */
+export function BuildingMemories() {
+  const [index, setIndex] = useState(0)
+  useEffect(() => {
+    const timer = setInterval(
+      () => setIndex((current) => Math.min(current + 1, buildingSteps.length - 1)),
+      2600,
+    )
+    return () => clearInterval(timer)
+  }, [])
+  return (
+    <div className="card flex flex-col items-center px-6 py-10 text-center">
+      <div aria-hidden="true" className="relative grid size-20 place-items-center">
+        <span className="absolute inset-0 rounded-full bg-sage/25 motion-safe:animate-ping" />
+        <span className="absolute inset-3 rounded-full bg-soft" />
+        <span className="mark relative size-9 after:inset-[10px] after:border-4 motion-safe:animate-pulse" />
+      </div>
+      <p role="status" className="mt-6 font-display text-lg font-semibold text-ink">
+        Turning your answers into memories…
+      </p>
+      <p
+        aria-hidden="true"
+        key={index}
+        className="onboarding-fade mt-1.5 text-sm font-semibold text-muted"
+      >
+        {buildingSteps[index]}…
+      </p>
+      <div
+        aria-hidden="true"
+        className="mt-6 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-soft"
+      >
+        <div className="onboarding-bar h-full w-1/3 rounded-full bg-sage" />
+      </div>
+      <p className="hint mt-5">This usually takes a few seconds.</p>
     </div>
   )
 }

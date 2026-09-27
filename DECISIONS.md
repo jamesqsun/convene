@@ -327,3 +327,7 @@ to reverse later won.
   offline; `next/font/google` would fetch at build time.
 - **Sidebar from the md breakpoint, bottom nav below it**, as in the mockups' desktop and phone
   frames. The sign-in and sign-up pages use the mockup 01 welcome hero, redrawn in sage.
+- **Grey linen instead of beige (added 2026-09-27).** The user asked for a greyer, lighter
+  background with no beige or green cast, so `linen` is a neutral #F5F5F5 instead of the mockup's
+  #F4F1EA, and `line` follows it to #E4E4E4 so borders do not read tan on grey. Muted and sage
+  text still pass AA on it (4.7:1 and 5.0:1).
