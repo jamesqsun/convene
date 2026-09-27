@@ -47,4 +47,13 @@ describe('WeekGrid', () => {
     expect(html).toMatch(/data-cell="0:0"[^>]*disabled=""/)
     expect(html).not.toMatch(/data-cell="5:24"[^>]*disabled=""/)
   })
+
+  it('shows busy time as amber even inside the too-soon-to-plan cutoff', () => {
+    const html = renderToStaticMarkup(
+      <WeekGrid week={week} selected={new Set()} onChange={() => undefined} />,
+    )
+    // The "Standup" busy block (Wed 09:30) falls before plannableAfter, so it is disabled
+    // for painting, but must still render as busy (amber) rather than plain locked (stone).
+    expect(html).toMatch(/data-cell="2:7"[^>]*disabled=""[^>]*bg-amber-100/)
+  })
 })
