@@ -93,6 +93,17 @@ to reverse later won.
 
 ## Planning pipeline
 
+- **Daily city interest discovery.** A separate daily Vercel cron (16:00 UTC, Hobby-compatible)
+  snapshots every profile city into a durable city/local-date job. Muse's Responses web search
+  must return a search call and URL citations; a second structured call selects an upcoming public
+  event within 14 days and uses a cited HTTPS source. No uncited fallback. City-only subscriber
+  snapshots reuse the existing interest response and notification queues; source links appear on
+  the check-in. Two cities run concurrently, with leases and bounded retries; regular worker
+  post-response passes resume leftover work. Forced runs retry skipped/failed searches but retain
+  the one-broadcast-per-city/day constraint. Suppress recently reused source URLs and text for
+  30 days. Inputs contain city metadata and prior public prompts, never private user memories.
+  Model grounding reduces invented events but is not independent factual verification.
+
 - **Parallelize finalized groups after selection.** Bucket selection, group partitioning, and
   proposal persistence finish before external planning starts. Process at most four independent
   groups concurrently (activity ranking, venue lookup, calendar checks, and atomic commit).

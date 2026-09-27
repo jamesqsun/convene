@@ -16,6 +16,16 @@ export function InterestCard({
   return (
     <article className="space-y-3 rounded-xl border border-stone-200 p-4">
       <p className="font-medium whitespace-pre-wrap">{prompt.text}</p>
+      {prompt.sourceUrl && (
+        <a
+          className="link text-sm"
+          href={prompt.sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Event details and source
+        </a>
+      )}
       <p className="text-sm">Are you interested in this?</p>
       <p className="text-xs text-stone-600">
         Your answer is private and helps personalize future plans.

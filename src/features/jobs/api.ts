@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { after } from 'next/server'
+import { resumeCityInterests } from '@/features/interests/city-api'
 import { type Env, getEnv } from '@/lib/env'
 import {
   HttpError,
@@ -34,4 +36,8 @@ export function jobsHandler(
 }
 
 export const POST: RouteHandler = (request, context) =>
-  jobsHandler(getEnv(), runJobsNow)(request, context)
+  jobsHandler(getEnv(), async (options) => {
+    const result = await runJobsNow(options)
+    after(resumeCityInterests)
+    return result
+  })(request, context)
