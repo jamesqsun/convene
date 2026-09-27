@@ -3,7 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createPgliteDb } from './db-pglite'
-import { applyMigrations } from './migrate'
+import { applyMigrations, pendingMigrations } from './migrate'
 
 async function migrationsFixture(): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'convene-migrations-'))
@@ -15,6 +15,25 @@ async function migrationsFixture(): Promise<string> {
   await writeFile(path.join(dir, 'README.md'), 'not a migration')
   return dir
 }
+
+describe('pendingMigrations', () => {
+  it('lists unapplied files in name order without changing the database', async () => {
+    const db = await createPgliteDb()
+    const dir = await migrationsFixture()
+    expect(await pendingMigrations(db, dir)).toEqual(['0001_first.sql', '0002_second.sql'])
+    await expect(db.query('select 1 from schema_migrations')).rejects.toThrow()
+    await expect(db.query('select 1 from notes')).rejects.toThrow()
+  })
+
+  it('lists only what was added since the last run', async () => {
+    const db = await createPgliteDb()
+    const dir = await migrationsFixture()
+    await applyMigrations(db, dir)
+    expect(await pendingMigrations(db, dir)).toEqual([])
+    await writeFile(path.join(dir, '0003_third.sql'), 'insert into notes values (3);')
+    expect(await pendingMigrations(db, dir)).toEqual(['0003_third.sql'])
+  })
+})
 
 describe('applyMigrations', () => {
   it('applies sql files in name order exactly once', async () => {
