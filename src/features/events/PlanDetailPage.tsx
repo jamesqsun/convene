@@ -49,7 +49,7 @@ export function PlanDetailPage({ eventId }: { eventId: string }) {
         <PastHangoutsSection hangouts={[past]} />
       </section>
     )
-  if (!state || (!plan && !detail)) return <p className="text-sm text-stone-600">Loading plan…</p>
+  if (!state || (!plan && !detail)) return <p className="hint">Loading plan…</p>
   const current = plan ?? detail?.plan
   if (notice) {
     return (

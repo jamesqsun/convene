@@ -45,12 +45,12 @@ export function PushTestButton() {
         type="button"
         disabled={busy}
         onClick={() => void test()}
-        className="text-sm underline disabled:opacity-50"
+        className="link text-sm disabled:opacity-50"
       >
         {busy ? 'Sending test…' : 'Send test notification'}
       </button>
       {message && (
-        <p role="status" className="text-sm text-stone-600">
+        <p role="status" className="text-sm text-muted">
           {message}
         </p>
       )}

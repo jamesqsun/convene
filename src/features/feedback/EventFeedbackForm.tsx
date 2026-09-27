@@ -49,16 +49,16 @@ export function EventFeedbackForm({
 
   return (
     <form
-      className="mt-4 space-y-2 border-t border-stone-200 pt-3"
+      className="mt-4 space-y-2 border-t border-line pt-3"
       onSubmit={(event) => {
         event.preventDefault()
         void submit()
       }}
     >
-      <label htmlFor={`event-feedback-${eventId}`} className="block text-sm font-semibold">
+      <label htmlFor={`event-feedback-${eventId}`} className="field-label">
         How was the hangout?
       </label>
-      <p className="text-xs text-stone-600">
+      <p className="hint">
         What did you enjoy, and what would you change next time? This is private and helps update
         your preference memories.
       </p>
@@ -72,28 +72,28 @@ export function EventFeedbackForm({
         maxLength={2000}
         rows={3}
         placeholder="I enjoyed the walk, but would prefer a quieter place to chat afterward."
-        className="w-full rounded-lg border border-stone-300 p-2 text-sm"
+        className="field mt-0"
       />
       {feedback?.memoriesUpdated ? (
-        <p className="text-xs text-stone-600">Feedback saved. Your memories are up to date.</p>
+        <p className="hint">Feedback saved. Your memories are up to date.</p>
       ) : !feedback || feedback.memoryUpdateFailed ? (
         <button
           type="submit"
           disabled={busy || (!feedback && !text.trim())}
-          className="rounded-lg bg-stone-900 px-3 py-2 text-sm text-white disabled:opacity-50"
+          className="btn btn-primary btn-sm"
         >
           {busy ? 'Saving…' : feedback ? 'Retry memory update' : 'Submit event feedback'}
         </button>
       ) : null}
       {feedback && !feedback.memoriesUpdated && (
-        <p role="status" className="text-xs text-stone-600">
+        <p role="status" className="hint">
           {feedback.memoryUpdateFailed
             ? 'Feedback saved. We could not update your memories; please retry.'
             : 'Feedback saved. Your memories are updating in the background—you can leave this page.'}
         </p>
       )}
       {message && (
-        <p role="status" className="text-sm text-stone-700">
+        <p role="status" className="text-sm font-semibold text-ink/85">
           {message}
         </p>
       )}
