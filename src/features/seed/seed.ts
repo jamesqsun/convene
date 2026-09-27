@@ -87,7 +87,10 @@ async function seedMemories(db: Db, ai: AiProvider, persona: Persona): Promise<v
   await refreshDerived(db, ai, persona.id)
 }
 
-/** Replaces the persona's unassigned future slots with fresh ones on the next two planning dates. */
+/**
+ * Replaces the persona's unassigned future slots with fresh ones on the next two planning dates.
+ * A window that overlaps a slot the planner already filled is skipped, so the plan stands.
+ */
 async function seedAvailability(db: Db, persona: Persona, now: number): Promise<number> {
   const city = resolveCity(persona.cityKey)!
   await db.query(
@@ -100,8 +103,9 @@ async function seedAvailability(db: Db, persona: Persona, now: number): Promise<
     const date = addLocalDays(today, 2 + offset)
     const [sh, sm] = window.start.split(':').map(Number)
     const [eh, em] = window.end.split(':').map(Number)
-    await db.query(
-      `insert into availability_slots (user_id, "window", timezone) values ($1, tstzrange($2::timestamptz, $3::timestamptz, '[)'), $4)`,
+    const slot = await db.query(
+      `insert into availability_slots (user_id, "window", timezone) values ($1, tstzrange($2::timestamptz, $3::timestamptz, '[)'), $4)
+       on conflict do nothing returning id`,
       [
         persona.id,
         new Date(zonedTime(city.timezone, date, sh, sm)).toISOString(),
@@ -114,7 +118,7 @@ async function seedAvailability(db: Db, persona: Persona, now: number): Promise<
       `insert into availability_weeks (user_id, week_start, status) values ($1, $2::date, 'confirmed') on conflict (user_id, week_start) do nothing`,
       [persona.id, weekStartOf(city.timezone, zonedTime(city.timezone, date, 12))],
     )
-    inserted += 1
+    inserted += slot.length
   }
   return inserted
 }

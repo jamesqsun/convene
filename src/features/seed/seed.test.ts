@@ -147,6 +147,29 @@ describe('seedDemoWorld', () => {
     ).toEqual(maya)
   })
 
+  it('keeps a slot the planner already filled instead of seeding over it', async () => {
+    const filled = await db.query<{ id: string }>(
+      `update availability_slots set status = 'filled', assigned_event_id = (select id from events limit 1)
+       where id = (select id from availability_slots where user_id = $1 and status = 'pending'
+                   order by lower("window") limit 1)
+       returning id`,
+      [seedFriendships.maya],
+    )
+
+    const summary = await seedDemoWorld(db, fakeAiProvider(), { now })
+
+    expect(summary.slots).toBe(21)
+    expect(
+      await db.query('select status from availability_slots where id = $1', [filled[0]!.id]),
+    ).toEqual([{ status: 'filled' }])
+    expect(
+      await db.query(
+        `select count(*)::int as n from availability_slots where user_id = $1 and status = 'pending'`,
+        [seedFriendships.maya],
+      ),
+    ).toEqual([{ n: 1 }])
+  })
+
   it('keeps every persona fictional and phone numbers in the 555 range', () => {
     expect(personas.every((p) => p.email.endsWith('@convene.demo'))).toBe(true)
     expect(personas.every((p) => /^\+1(416|604)555\d{4}$/.test(p.phone))).toBe(true)
