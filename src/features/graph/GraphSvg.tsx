@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { formatDaysAgo } from '@/lib/format'
 import { ringLayout } from './layout'
 import { edgeOpacity } from './opacity'
@@ -11,7 +12,21 @@ export interface GraphSvgProps {
 const size = 320
 const centre = { x: size / 2, y: size / 2 }
 
-/** The personal graph: the viewer in the middle, everyone they have met around them. */
+/**
+ * Deterministic per-node drift so the ring never moves in lockstep: each friend floats along its
+ * own small path at its own pace. Offsets stay under the centre circle's radius, so lines still
+ * start behind "You".
+ */
+export function driftFor(index: number): { x: string; y: string; duration: string } {
+  const angle = index * 2.39996 // golden angle, spreads directions evenly for any count
+  return {
+    x: `${(4 * Math.cos(angle)).toFixed(2)}px`,
+    y: `${(4 * Math.sin(angle)).toFixed(2)}px`,
+    duration: `${(5 + (index % 4) * 0.9).toFixed(1)}s`,
+  }
+}
+
+/** The personal graph: the viewer in the middle, their mutual friends around them. */
 export function GraphSvg({ nodes, now }: GraphSvgProps) {
   const points = ringLayout(nodes.length, centre, size * 0.38)
   return (
@@ -19,41 +34,52 @@ export function GraphSvg({ nodes, now }: GraphSvgProps) {
       viewBox={`0 0 ${size} ${size}`}
       role="img"
       aria-label="Your connections"
-      className="w-full max-w-sm"
+      className="graph w-full max-w-sm overflow-visible"
     >
+      <circle className="graph-pulse" cx={centre.x} cy={centre.y} r={18} fill="#047857" />
       {nodes.map((node, index) => {
         const point = points[index]!
+        const drift = driftFor(index)
+        // Labels sit on the side facing away from the centre so the line never crosses them.
+        const above = point.y < centre.y - 1
+        const nameY = above ? point.y - 29 : point.y + 26
+        const agoY = above ? point.y - 19 : point.y + 37
+        const style = {
+          '--i': index,
+          '--dx': drift.x,
+          '--dy': drift.y,
+          '--drift-duration': drift.duration,
+        } as CSSProperties
         return (
-          <line
-            key={`edge-${node.userId}`}
-            x1={centre.x}
-            y1={centre.y}
-            x2={point.x}
-            y2={point.y}
-            stroke={node.isFriend ? '#047857' : '#78716c'}
-            strokeWidth={node.isFriend ? 3 : 1.5}
-            strokeDasharray={node.isFriend ? undefined : '4 4'}
-            strokeOpacity={edgeOpacity(node.lastMetAt, now)}
-          />
-        )
-      })}
-      {nodes.map((node, index) => {
-        const point = points[index]!
-        return (
-          <g key={node.userId}>
-            <circle
-              cx={point.x}
-              cy={point.y}
-              r={14}
-              fill={node.isFriend ? '#d1fae5' : '#f5f5f4'}
-              stroke={node.isFriend ? '#047857' : '#a8a29e'}
+          <g key={node.userId} className="graph-friend" style={style}>
+            <line
+              className="graph-edge"
+              pathLength={1}
+              x1={centre.x}
+              y1={centre.y}
+              x2={point.x}
+              y2={point.y}
+              stroke="#047857"
+              strokeWidth={3}
+              strokeLinecap="round"
+              strokeOpacity={edgeOpacity(node.lastMetAt, now)}
             />
-            <text x={point.x} y={point.y + 26} textAnchor="middle" fontSize={10} fill="#44403c">
-              {node.name}
-            </text>
-            <text x={point.x} y={point.y + 37} textAnchor="middle" fontSize={8} fill="#78716c">
-              {formatDaysAgo(node.lastMetAt, now)}
-            </text>
+            <g className="graph-node">
+              <circle
+                className="graph-dot"
+                cx={point.x}
+                cy={point.y}
+                r={14}
+                fill="#d1fae5"
+                stroke="#047857"
+              />
+              <text x={point.x} y={nameY} textAnchor="middle" fontSize={10} fill="#44403c">
+                {node.name}
+              </text>
+              <text x={point.x} y={agoY} textAnchor="middle" fontSize={8} fill="#78716c">
+                {formatDaysAgo(node.lastMetAt, now)}
+              </text>
+            </g>
           </g>
         )
       })}

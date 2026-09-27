@@ -10,7 +10,7 @@ beforeAll(async () => {
 })
 
 describe('loadGraph', () => {
-  it('lists completed co-participants with recency and friendship, excluding cancelled and withdrawn', async () => {
+  it('lists completed co-participants who are mutual friends, excluding non-friends, cancelled and withdrawn', async () => {
     const me = await createUser(db, { name: 'Me' })
     const friend = await createUser(db, { name: 'Friend' })
     const acquaintance = await createUser(db, { name: 'Acq' })
@@ -66,18 +66,9 @@ describe('loadGraph', () => {
     const graph = await loadGraph(db, me, Date.parse('2026-10-01T00:00:00Z'))
     expect(graph).toEqual([
       {
-        userId: acquaintance,
-        name: 'Acq',
-        interests: ['coffee'],
-        isFriend: false,
-        meetings: 1,
-        lastMetAt: Date.parse('2026-09-20T23:00:00Z'),
-      },
-      {
         userId: friend,
         name: 'Friend',
         interests: ['coffee'],
-        isFriend: true,
         meetings: 2,
         lastMetAt: Date.parse('2026-09-20T23:00:00Z'),
       },

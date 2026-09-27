@@ -273,3 +273,11 @@ to reverse later won.
 - **Plan cards are decorative, not photographic.** Nothing in the schema stores venue or activity
   photos, so cards use a deterministic gradient and initials-only avatars keyed by id, rather than
   fabricating placeholder imagery.
+
+## Friend graph shows only mutual friends (added 2026-09-27)
+
+- **Co-participants without a friendship are left off the graph.** The specs ask the graph to show
+  all connection history and distinguish friends from it; the user asked for friends only, so
+  `loadGraph` joins `friendships` and returns nothing else, and the dashed grey non-friend styling
+  is gone. Fading by recency and the minimum opacity are unchanged, so old friendships still stay
+  visible.
