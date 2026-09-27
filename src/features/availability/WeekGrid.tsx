@@ -46,9 +46,9 @@ function overlaysFor(week: WeekView): Map<string, Overlay> {
 
 function cellClass(isOn: boolean, overlay: Overlay | undefined, isLocked: boolean): string {
   if (overlay?.kind === 'event') return 'bg-emerald-600 text-white'
-  if (isLocked) return 'bg-stone-100 text-stone-300'
   if (overlay?.kind === 'busy')
     return isOn ? 'bg-amber-200 text-amber-900' : 'bg-amber-100 text-amber-800'
+  if (isLocked) return 'bg-stone-100 text-stone-300'
   return isOn ? 'bg-stone-900 text-white' : 'bg-white hover:bg-stone-100'
 }
 
