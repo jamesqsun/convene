@@ -3,7 +3,7 @@ import type { Db } from '@/lib/db'
 import { fakeAiProvider } from '@/features/ai/fake'
 import { createTestDb, createUser, count } from '../../../supabase/tests/harness'
 import { personas } from './people'
-import { resetSeededWorld, resetTables } from './reset'
+import { resetSeededWorld, resetTables, wipeWorld } from './reset'
 import { seedDemoWorld } from './seed'
 
 let db: Db
@@ -33,6 +33,36 @@ function auth() {
 }
 const adminType = (admin: ReturnType<typeof auth>) =>
   admin as unknown as Parameters<typeof resetSeededWorld>[1]
+
+describe('wipeWorld', () => {
+  it('removes every account and row, keeps the migration record, and leaves a seedable database', async () => {
+    const wiped = await createTestDb()
+    await seedDemoWorld(wiped, fakeAiProvider(), { now })
+    await createUser(wiped)
+    const migrationCount = await count(wiped, 'schema_migrations')
+
+    await wipeWorld(wiped)
+
+    expect(await Promise.all(resetTables.map((table) => count(wiped, table)))).toEqual(
+      resetTables.map(() => 0),
+    )
+    expect(await count(wiped, 'auth.users')).toBe(0)
+    expect(await count(wiped, 'schema_migrations')).toBe(migrationCount)
+    expect(await seedDemoWorld(wiped, fakeAiProvider(), { now })).toMatchObject({
+      people: 12,
+      historyEvents: 2,
+    })
+  })
+
+  it('covers every table in the schema except the migration record', async () => {
+    const schema = await createTestDb()
+    const tables = await schema.query<{ table_name: string }>(
+      `select table_name from information_schema.tables
+       where table_schema = 'public' and table_type = 'BASE TABLE' and table_name <> 'schema_migrations'`,
+    )
+    expect(tables.map((table) => table.table_name).sort()).toEqual([...resetTables].sort())
+  })
+})
 
 describe('resetSeededWorld', () => {
   it('removes extra users and dirty state, restores fresh seed counts, and can run twice', async () => {

@@ -33,6 +33,19 @@ export const resetTables = [
   'profiles',
 ] as const
 
+const truncateResetTables = `truncate table ${resetTables.map((name) => `public.${name}`).join(', ')} restart identity`
+
+/**
+ * Empties every Convene table and removes every account, all or nothing. It deletes accounts as
+ * the database owner instead of through the Auth API, so it shares one transaction with the rest.
+ */
+export async function wipeWorld(db: Db): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.exec(truncateResetTables)
+    await tx.exec('delete from auth.users')
+  })
+}
+
 /** Requires exclusive use of the project. Auth API operations cannot share the SQL transaction. */
 export async function resetSeededWorld(db: Db, admin: AuthAdmin, password: string, now: number) {
   const users = await db.query<{ id: string }>('select id from auth.users order by id')
@@ -75,9 +88,7 @@ export async function resetSeededWorld(db: Db, admin: AuthAdmin, password: strin
       throw new Error(
         'Auth users do not match seed personas; stop concurrent writers and verify the project configuration',
       )
-    await tx.exec(
-      `truncate table ${resetTables.map((name) => `public.${name}`).join(', ')} restart identity`,
-    )
+    await tx.exec(truncateResetTables)
     return seedDemoWorld(tx, fakeAiProvider(), { now, ensureAuthUser: async () => {} })
   })
 }

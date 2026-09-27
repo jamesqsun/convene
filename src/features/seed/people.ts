@@ -18,8 +18,11 @@ export interface Persona {
   answers: Answer[]
   memories: MemoryDraft[]
   isOnboarded: boolean
-  /** Local clock times for the seeded availability on each of the two upcoming planning dates. */
-  availability: { start: string; end: string }[]
+  /**
+   * Local clock times for the seeded availability. Entries fall on consecutive days starting two
+   * days out, unless one names its own `dayOffset` from today.
+   */
+  availability: { start: string; end: string; dayOffset?: number }[]
 }
 
 export const torontoKey = 'ca:ontario:toronto'

@@ -277,9 +277,15 @@ const lastNames =
     ' ',
   )
 
-const cities = [
-  { key: torontoKey, name: 'Toronto', areaCodes: ['647', '437'] },
-  { key: vancouverKey, name: 'Vancouver', areaCodes: ['778', '236'] },
+/** Where generated people live, with the area codes their fictional phone numbers use. */
+export interface SeedCity {
+  key: string
+  areaCodes: string[]
+}
+
+const castCities: SeedCity[] = [
+  { key: torontoKey, areaCodes: ['647', '437'] },
+  { key: vancouverKey, areaCodes: ['778', '236'] },
 ]
 
 const availabilities: Persona['availability'][] = [
@@ -344,7 +350,7 @@ function memoryFrom(trait: Trait): MemoryDraft {
   }
 }
 
-function generatedPerson(index: number): Persona {
+function generatedPerson(index: number, cities: readonly SeedCity[]): Persona {
   const random = randomFrom(index + 1)
   const city = cities[index % cities.length]!
   const indexInCity = Math.floor(index / cities.length)
@@ -376,8 +382,12 @@ function generatedPerson(index: number): Persona {
   }
 }
 
-export function generatedPeople(count: number): Persona[] {
-  return Array.from({ length: count }, (_, index) => generatedPerson(index))
+/** People are dealt across `cities` in turn. */
+export function generatedPeople(
+  count: number,
+  cities: readonly SeedCity[] = castCities,
+): Persona[] {
+  return Array.from({ length: count }, (_, index) => generatedPerson(index, cities))
 }
 
 /** Removes and returns `size` random members; fewer when the pool runs out. */
@@ -397,7 +407,7 @@ function fittingActivity(members: readonly Persona[]): Activity {
   )
 }
 
-type Answers = Pick<PastEvent, 'yes' | 'no'>
+export type Answers = Pick<PastEvent, 'yes' | 'no'>
 
 /** Most pairs answer, most answers are yes; mutual yes becomes a friendship when seeded. */
 function generatedAnswers(members: readonly Persona[], random: Random): Answers {
@@ -413,31 +423,27 @@ function generatedAnswers(members: readonly Persona[], random: Random): Answers 
   return answers
 }
 
-function generatedPastEvent(
-  index: number,
-  people: readonly Persona[],
-  booked: Set<string>,
-): PastEvent | null {
-  const random = randomFrom(1_000_000 + index)
-  const city = cities[index % cities.length]!
-  const daysAgo = earliestDaysAgo + Math.floor(random() * daysAgoSpread)
-  const isFree = (person: Persona) =>
-    person.cityKey === city.key && person.isOnboarded && !booked.has(`${person.id}:${daysAgo}`)
-  const size = smallestGroup + Math.floor(random() * groupSpread)
-  const members = drawn(people.filter(isFree), size, random)
-  if (members.length < smallestGroup) return null
-  for (const member of members) booked.add(`${member.id}:${daysAgo}`)
-  const activity = fittingActivity(members)
+export interface PastEventDraft {
+  eventId: string
+  daysAgo: number
+  /** All from one city; the first member's city is the event's. */
+  members: readonly Persona[]
+  answers: Answers
+}
+
+/** A past hangout for these members, with the activity and explanation that fit them. */
+export function pastEventAmong(draft: PastEventDraft): PastEvent {
+  const activity = fittingActivity(draft.members)
   return {
-    eventId: `00000000-0000-4000-8000-e9${padded(index + 1, 10)}`,
-    cityKey: city.key,
-    daysAgo,
-    members: members.map((member) => member.id),
+    eventId: draft.eventId,
+    cityKey: draft.members[0]!.cityKey,
+    daysAgo: draft.daysAgo,
+    members: draft.members.map((member) => member.id),
     activityId: activity.id,
     activityName: activity.name,
     venueName: `(Demo) ${activity.name} on Main`,
     explanation: buildExplanation(
-      members.map((member) => ({
+      draft.members.map((member) => ({
         userId: member.id,
         embedding: null,
         interests: member.interests,
@@ -445,16 +451,46 @@ function generatedPastEvent(
       })),
       activity.name,
     ),
-    ...generatedAnswers(members, random),
+    ...draft.answers,
   }
 }
 
-/** Past hangouts among `people`. One person is never in two events on the same day. */
-export function generatedPastEvents(people: readonly Persona[], count: number): PastEvent[] {
-  const booked = new Set<string>()
+function generatedPastEvent(
+  index: number,
+  people: readonly Persona[],
+  booked: Set<string>,
+): PastEvent | null {
+  const random = randomFrom(1_000_000 + index)
+  const cityKeys = [...new Set(people.map((person) => person.cityKey))]
+  const cityKey = cityKeys[index % cityKeys.length]
+  const daysAgo = earliestDaysAgo + Math.floor(random() * daysAgoSpread)
+  const isFree = (person: Persona) =>
+    person.cityKey === cityKey && person.isOnboarded && !booked.has(`${person.id}:${daysAgo}`)
+  const size = smallestGroup + Math.floor(random() * groupSpread)
+  const members = drawn(people.filter(isFree), size, random)
+  if (members.length < smallestGroup) return null
+  for (const member of members) booked.add(`${member.id}:${daysAgo}`)
+  return pastEventAmong({
+    eventId: `00000000-0000-4000-8000-e9${padded(index + 1, 10)}`,
+    daysAgo,
+    members,
+    answers: generatedAnswers(members, random),
+  })
+}
+
+/**
+ * Past hangouts among `people`, in each of their cities in turn. One person is never in two
+ * events on the same day, nor on a day listed in `booked` as `personId:daysAgo`.
+ */
+export function generatedPastEvents(
+  people: readonly Persona[],
+  count: number,
+  booked: ReadonlySet<string> = new Set(),
+): PastEvent[] {
+  const taken = new Set(booked)
   const events: PastEvent[] = []
   for (let index = 0; index < count; index += 1) {
-    const event = generatedPastEvent(index, people, booked)
+    const event = generatedPastEvent(index, people, taken)
     if (event) events.push(event)
   }
   return events

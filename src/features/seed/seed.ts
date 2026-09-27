@@ -100,7 +100,7 @@ async function seedAvailability(db: Db, persona: Persona, now: number): Promise<
   const today = localDateOf(city.timezone, now)
   let inserted = 0
   for (const [offset, window] of persona.availability.entries()) {
-    const date = addLocalDays(today, 2 + offset)
+    const date = addLocalDays(today, window.dayOffset ?? 2 + offset)
     const [sh, sm] = window.start.split(':').map(Number)
     const [eh, em] = window.end.split(':').map(Number)
     const slot = await db.query(
