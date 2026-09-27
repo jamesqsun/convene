@@ -9,7 +9,7 @@ import type { AiProvider } from '@/features/ai/provider'
 import { attributesToObject } from '@/features/ai/schemas'
 import type { Db } from '@/lib/db'
 import { addLocalDays, localDateOf, zonedTime } from '@/lib/time'
-import { seedHistory } from './history'
+import { type PastEvent, seedHistory } from './history'
 import { type Persona, personas } from './people'
 
 /**
@@ -24,6 +24,9 @@ export interface SeedOptions {
   ensureAuthUser?: (persona: Persona) => Promise<void>
   /** Demo mode connects a couple of personas to the fictional calendar so the overlay has content. */
   calendar?: { provider: CalendarProvider; tokenSecret: string }
+  /** Defaults to the hand-written cast and its two hangouts. */
+  people?: readonly Persona[]
+  pastEvents?: readonly PastEvent[]
 }
 
 export interface SeedSummary {
@@ -140,9 +143,10 @@ export async function seedDemoWorld(
   ai: AiProvider,
   options: SeedOptions,
 ): Promise<SeedSummary> {
+  const people = options.people ?? personas
   let slots = 0
   let calendarsConnected = 0
-  for (const persona of personas) {
+  for (const persona of people) {
     await (options.ensureAuthUser ?? ((p: Persona) => ensureDemoAuthUser(db, p)))(persona)
     await upsertProfile(db, persona)
     await seedMemories(db, ai, persona)
@@ -154,6 +158,6 @@ export async function seedDemoWorld(
     )
       calendarsConnected += 1
   }
-  const historyEvents = await seedHistory(db, options.now)
-  return { people: personas.length, slots, historyEvents, calendarsConnected }
+  const historyEvents = await seedHistory(db, options.now, options.pastEvents)
+  return { people: people.length, slots, historyEvents, calendarsConnected }
 }

@@ -1,3 +1,4 @@
+import { resolveCity } from '@/features/cities/search'
 import type { Db } from '@/lib/db'
 import { day, hour, localDateOf, zonedTime } from '@/lib/time'
 import { seedFriendships, torontoKey } from './people'
@@ -9,17 +10,19 @@ import { seedFriendships, torontoKey } from './people'
  * H2, 45 days ago: Maya and Dev, mutual yes (friends, and overdue for a reconnection bonus).
  */
 
-const timezone = 'America/Toronto'
 const h1EventId = '00000000-0000-4000-8000-00000000e001'
 const h2EventId = '00000000-0000-4000-8000-00000000e002'
 
-interface PastEvent {
+export interface PastEvent {
   eventId: string
+  cityKey: string
   daysAgo: number
   members: string[]
   activityId: string
   activityName: string
   venueName: string
+  explanation: string
+  /** Ordered [author, subject] pairs. */
   yes: [string, string][]
   no: [string, string][]
 }
@@ -27,6 +30,8 @@ interface PastEvent {
 const pastEvents: PastEvent[] = [
   {
     eventId: h1EventId,
+    cityKey: torontoKey,
+    explanation: 'You share an interest in coffee.',
     daysAgo: 20,
     members: [seedFriendships.maya, seedFriendships.ben, seedFriendships.chloe],
     activityId: 'board_game_cafe',
@@ -41,6 +46,8 @@ const pastEvents: PastEvent[] = [
   },
   {
     eventId: h2EventId,
+    cityKey: torontoKey,
+    explanation: 'You share an interest in coffee.',
     daysAgo: 45,
     members: [seedFriendships.maya, seedFriendships.dev],
     activityId: 'park_walk',
@@ -55,6 +62,9 @@ const pastEvents: PastEvent[] = [
 ]
 
 async function insertPastEvent(db: Db, event: PastEvent, now: number): Promise<void> {
+  const city = resolveCity(event.cityKey)
+  if (!city) throw new Error(`Seed city ${event.cityKey} is unknown`)
+  const timezone = city.timezone
   const localDate = localDateOf(timezone, now - event.daysAgo * day)
   const start = zonedTime(timezone, localDate, 18)
   const end = start + 2 * hour
@@ -64,7 +74,7 @@ async function insertPastEvent(db: Db, event: PastEvent, now: number): Promise<v
     `insert into planning_batches (city_key, timezone, local_date, status, pass, attempts, scoring_time, finished_at)
      values ($1, $2, $3::date, 'done', 1, 1, $4::timestamptz, $4::timestamptz)
      on conflict (city_key, local_date) do update set updated_at = now() returning id`,
-    [torontoKey, timezone, localDate, new Date(start - 2 * day).toISOString()],
+    [city.key, timezone, localDate, new Date(start - 2 * day).toISOString()],
   )
   const slotIds: Record<string, string> = {}
   for (const userId of event.members) {
@@ -88,22 +98,23 @@ async function insertPastEvent(db: Db, event: PastEvent, now: number): Promise<v
   )
   await db.query(
     `insert into events (id, planning_id, city_key, timezone, local_date, activity_id, activity_name, duration_minutes, explanation, venue, starts_at, ends_at)
-     values ($1, $2, $3, $4, $5::date, $6, $7, 120, 'You share an interest in coffee.', $8::jsonb, $9::timestamptz, $10::timestamptz)`,
+     values ($1, $2, $3, $4, $5::date, $6, $7, 120, $8, $9::jsonb, $10::timestamptz, $11::timestamptz)`,
     [
       event.eventId,
       planningId,
-      torontoKey,
+      city.key,
       timezone,
       localDate,
       event.activityId,
       event.activityName,
+      event.explanation,
       JSON.stringify({
         provider: 'fictional',
         place_id: `demo:${event.activityId}`,
         name: event.venueName,
-        address: '12 Main St, Toronto (fictional)',
-        lat: 43.65,
-        lng: -79.38,
+        address: `12 Main St, ${city.name} (fictional)`,
+        lat: city.lat,
+        lng: city.lng,
         hours_verified: false,
       }),
       startIso,
@@ -150,9 +161,13 @@ async function insertPastEvent(db: Db, event: PastEvent, now: number): Promise<v
 }
 
 /** Idempotent: an event id that already exists is left alone. */
-export async function seedHistory(db: Db, now: number): Promise<number> {
+export async function seedHistory(
+  db: Db,
+  now: number,
+  events: readonly PastEvent[] = pastEvents,
+): Promise<number> {
   let inserted = 0
-  for (const event of pastEvents) {
+  for (const event of events) {
     const existing = await db.query('select 1 from events where id = $1', [event.eventId])
     if (existing.length > 0) continue
     await insertPastEvent(db, event, now)
