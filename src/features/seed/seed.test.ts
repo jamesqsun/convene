@@ -83,6 +83,34 @@ describe('seedDemoWorld', () => {
     })
   })
 
+  it('returns a mid-onboarding persona to that state after someone finished onboarding as them', async () => {
+    const ivy = personas.find((persona) => !persona.isOnboarded)!
+    await db.query(
+      `update profiles set city_key = 'us:georgia:atlanta', city_name = 'Atlanta', city_timezone = 'America/New_York',
+         city_lat = 33.75, city_lng = -84.39, phone_e164 = '+14045550199', onboarding_completed_at = now()
+       where id = $1`,
+      [ivy.id],
+    )
+    const maya = await db.query<{ at: Date }>(
+      'select onboarding_completed_at as at from profiles where id = $1',
+      [seedFriendships.maya],
+    )
+
+    await seedDemoWorld(db, fakeAiProvider(), { now })
+
+    expect(
+      await db.query(
+        'select city_key, phone_e164, onboarding_completed_at from profiles where id = $1',
+        [ivy.id],
+      ),
+    ).toEqual([{ city_key: null, phone_e164: null, onboarding_completed_at: null }])
+    expect(
+      await db.query('select onboarding_completed_at as at from profiles where id = $1', [
+        seedFriendships.maya,
+      ]),
+    ).toEqual(maya)
+  })
+
   it('keeps every persona fictional and phone numbers in the 555 range', () => {
     expect(personas.every((p) => p.email.endsWith('@convene.demo'))).toBe(true)
     expect(personas.every((p) => /^\+1(416|604)555\d{4}$/.test(p.phone))).toBe(true)

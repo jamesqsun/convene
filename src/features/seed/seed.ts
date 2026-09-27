@@ -50,7 +50,8 @@ async function upsertProfile(db: Db, persona: Persona): Promise<void> {
        name = excluded.name, age = excluded.age, city_key = excluded.city_key, city_name = excluded.city_name,
        city_timezone = excluded.city_timezone, city_lat = excluded.city_lat, city_lng = excluded.city_lng,
        phone_e164 = excluded.phone_e164, interests = excluded.interests, onboarding_answers = excluded.onboarding_answers,
-       onboarding_completed_at = coalesce(profiles.onboarding_completed_at, excluded.onboarding_completed_at)`,
+       onboarding_completed_at = case when excluded.onboarding_completed_at is null then null
+         else coalesce(profiles.onboarding_completed_at, excluded.onboarding_completed_at) end`,
     [
       persona.id,
       persona.name,
