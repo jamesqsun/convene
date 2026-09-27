@@ -51,11 +51,12 @@ Maya and Ben to a fictional calendar so the overlay is visible without Google.
    time in amber, and cells too soon to plan greyed out. Drag across cells to paint or clear, save
    the week, or step to next week. Tap **Run planning now (demo)** to execute the batch immediately
    instead of waiting for midnight.
-3. A banner announces the new plan. **Plans** shows the activity, the fictional venue (labelled as
-   such, with unverified hours), the exact time, the other people with their interests, and their
-   phone numbers. **Withdraw** removes only you; the plan survives if two people remain.
-4. **Hangouts** lists completed hangouts. Answer yes or no for each person. Answers are private and
-   final; when both people say yes they become friends, shown as a badge.
+3. A banner announces the new plan. **Plans** shows a card per plan; tap one for a popup with the
+   activity, the fictional venue (labelled as such, with unverified hours), the exact time, the
+   other people with their interests, and their phone numbers. **Withdraw** removes only you; the
+   plan survives if two people remain. Completed hangouts sit in a "Past hangouts" section at the
+   bottom of the same page rather than their own tab; answer yes or no for each person there.
+   Answers are private and final; when both people say yes they become friends, shown as a badge.
 5. **Graph** draws you in the middle and everyone you have met around you. Friends are solid lines;
    lines fade with time since your last Convene hangout together but never disappear.
 6. **Profile** shows what Convene remembers as editable memories. Edit a title, summary, or
