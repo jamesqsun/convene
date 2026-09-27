@@ -108,15 +108,6 @@ body {
   .link {
     @apply font-bold text-sage-deep underline decoration-sage/40 underline-offset-2 hover:decoration-sage;
   }
-
-  /* The Convene mark: a sage disc with an open ring. */
-  .mark {
-    @apply relative inline-block size-[26px] flex-none rounded-full bg-sage;
-  }
-  .mark::after {
-    content: '';
-    @apply absolute inset-[7px] rounded-full border-[3px] border-linen border-r-transparent;
-  }
 }
 
 /* Friend graph motion (src/features/graph/GraphSvg.tsx). Every element's resting state is its

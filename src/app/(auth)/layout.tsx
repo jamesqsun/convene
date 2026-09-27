@@ -1,3 +1,5 @@
+import { LogoMark } from '@/features/brand/Logo'
+
 /** The welcome layout from mockups/01-welcome.html, drawn in Sage & Linen. */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -16,7 +18,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           className="absolute -right-[120px] -bottom-[200px] h-[240px] w-[380px] rounded-full bg-sage/90 md:-right-[200px] md:-bottom-[330px] md:h-[400px] md:w-[640px]"
         />
         <div className="relative">
-          <span className="mark mb-3 size-11 after:inset-3 after:border-[5px]" aria-hidden="true" />
+          <LogoMark className="mb-3 size-12 text-sage-deep" />
           <h1 className="text-[40px] leading-none md:text-[56px]">Convene</h1>
           <p className="mt-2 text-[17px] text-ink">
             You give Convene time.

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { LogoMark } from '@/features/brand/Logo'
 import { Spinner } from '@/features/shell/Spinner'
 import { ApiError, apiFetch } from '@/lib/client-api'
 import { AnswersStep, BasicsStep, CityStep, InterestsStep, PhoneStep } from './OnboardingSteps'
@@ -229,7 +230,7 @@ export function BuildingMemories() {
       <div aria-hidden="true" className="relative grid size-20 place-items-center">
         <span className="absolute inset-0 rounded-full bg-sage/25 motion-safe:animate-ping" />
         <span className="absolute inset-3 rounded-full bg-soft" />
-        <span className="mark relative size-9 after:inset-[10px] after:border-4 motion-safe:animate-pulse" />
+        <LogoMark className="relative size-10 text-sage-deep motion-safe:animate-pulse" />
       </div>
       <p role="status" className="mt-6 font-display text-lg font-semibold text-ink">
         Turning your answers into memories…

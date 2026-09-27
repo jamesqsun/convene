@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
+import { LogoMark } from '@/features/brand/Logo'
 import { useAppState } from '@/features/state/useAppState'
 
 const onboardingPath = '/onboarding'
@@ -22,7 +23,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   if (isLoading || !state || needsOnboarding) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 text-sm font-semibold text-muted">
-        <span className="mark animate-pulse" aria-hidden="true" />
+        <LogoMark className="size-9 text-sage-deep motion-safe:animate-pulse" />
         <p>Loading…</p>
       </div>
     )

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { Logo } from '@/features/brand/Logo'
 import { isActivePath, navItems } from './BottomNav'
 
 /** Primary navigation from the md breakpoint up: brand, destinations, and the tagline. */
@@ -11,8 +12,7 @@ export function SideNav() {
   return (
     <aside className="sticky top-0 hidden h-screen flex-col border-r border-line bg-[color-mix(in_srgb,var(--color-surface)_60%,var(--color-linen))] px-4 py-6 md:flex">
       <a href="/availability" className="flex items-center gap-2.5 px-2 pb-6">
-        <span className="mark" aria-hidden="true" />
-        <span className="font-display text-[22px] font-semibold tracking-tight">Convene</span>
+        <Logo className="text-[22px]" />
       </a>
       <nav aria-label="Primary">
         <ul className="flex flex-col gap-1">

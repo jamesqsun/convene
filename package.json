@@ -24,7 +24,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "smoke": "tsx scripts/smoke.ts",
-    "e2e": "tsx scripts/browser-e2e.ts"
+    "e2e": "tsx scripts/browser-e2e.ts",
+    "icons": "tsx scripts/generate-icons.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
