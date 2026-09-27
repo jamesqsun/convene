@@ -1,4 +1,4 @@
-# Convene
+# Convene - HackGT 2026
 
 Arav Chadha, Mason Lam, James Sun
 
