@@ -262,3 +262,22 @@ to reverse later won.
   `loadGraph` joins `friendships` and returns nothing else, and the dashed grey non-friend styling
   is gone. Fading by recency and the minimum opacity are unchanged, so old friendships still stay
   visible.
+
+## Sage & Linen visual style (added 2026-09-27)
+
+- **One palette, from mockup 04 ("Sage & Linen").** The user picked it from the ten mockups in
+  `mockups/`; the other mockups are used only for component layouts. Colours are Tailwind tokens
+  in `src/app/globals.css` (`linen`, `surface`, `ink`, `muted`, `line`, `sage`, `soft`, `clay`),
+  and components use those tokens or the shared classes beside them (`card`, `btn-*`, `field`,
+  `chip`, `pill-*`) rather than raw Tailwind colours.
+- **Deepened shades for small text.** The mockup's sage (#6F8C5E) on white is 3.8:1 and its muted
+  grey on linen 4.0:1, under WCAG AA. Sage stays for fills, lines and decoration; `sage-deep`
+  (#56704A) carries sage text and primary buttons, `muted` is #6B6F64 instead of #75796E, and
+  terracotta has `clay-deep` for error text. These are the same hues, not new colours.
+- **Terracotta only where something needs attention**, per the palette's note: errors,
+  withdrawal, and attention pills. Good news (a new plan) is sage.
+- **Fraunces headings, Nunito body**, the type pairing shared by every mockup. The font files are
+  vendored under `src/app/fonts` (SIL OFL) and loaded with `next/font/local`, so demo builds stay
+  offline; `next/font/google` would fetch at build time.
+- **Sidebar from the md breakpoint, bottom nav below it**, as in the mockups' desktop and phone
+  frames. The sign-in and sign-up pages use the mockup 01 welcome hero, redrawn in sage.

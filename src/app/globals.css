@@ -1,5 +1,26 @@
 @import 'tailwindcss';
 
+/* Sage & Linen (mockups/04-availability.html). The -deep and -soft shades are the same hues
+   deepened or tinted so small text passes WCAG AA; see DECISIONS.md. */
+@theme {
+  --color-linen: #f4f1ea;
+  --color-surface: #ffffff;
+  --color-ink: #2e332a;
+  --color-muted: #6b6f64;
+  --color-line: #e3e0d6;
+  --color-sage: #6f8c5e;
+  --color-sage-deep: #56704a;
+  --color-soft: #e7eedf;
+  --color-clay: #e2725b;
+  --color-clay-deep: #a9493a;
+  --color-clay-soft: #fbe5df;
+}
+
+@theme inline {
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, serif;
+}
+
 :root {
   color-scheme: light;
 }
@@ -10,7 +31,92 @@ html {
 }
 
 body {
-  @apply bg-stone-50 text-stone-900 antialiased;
+  @apply bg-linen font-sans text-ink antialiased;
+  line-height: 1.45;
+}
+
+@layer base {
+  h1,
+  h2,
+  h3 {
+    @apply font-display font-semibold tracking-tight;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-sage;
+  }
+}
+
+/* Shared pieces, lifted from the mockups' CSS so every screen reads as one system. */
+@layer components {
+  .card {
+    @apply rounded-[18px] border border-line bg-surface p-4 shadow-[0_2px_0_rgba(46,51,42,0.03)];
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-transparent px-4 py-2.5 text-sm font-extrabold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-sage-deep text-white hover:bg-[#4b6340];
+  }
+  .btn-outline {
+    @apply border-line bg-surface text-ink hover:bg-linen;
+  }
+  .btn-ghost {
+    @apply border-sage text-sage-deep hover:bg-soft;
+  }
+  .btn-danger {
+    @apply border-clay-deep/40 bg-surface text-clay-deep hover:bg-clay-soft;
+  }
+  .btn-sm {
+    @apply rounded-[11px] px-3 py-1.5 text-[13px];
+  }
+
+  .field {
+    @apply mt-1.5 block w-full rounded-xl border-[1.5px] border-line bg-surface px-3 py-2.5 text-sm font-medium text-ink placeholder:text-muted/70 focus:border-sage focus:outline-none;
+  }
+  .field-label {
+    @apply block text-[13px] font-bold text-ink;
+  }
+
+  .chip {
+    @apply rounded-full border-[1.5px] border-line bg-surface px-3 py-1.5 text-[13px] font-bold text-ink transition-colors hover:border-sage/60;
+  }
+  .chip-on {
+    @apply border-sage bg-soft text-sage-deep;
+  }
+
+  .pill {
+    @apply inline-block rounded-full px-2.5 py-0.5 text-[11.5px] font-bold;
+  }
+  .pill-sage {
+    @apply bg-soft text-sage-deep;
+  }
+  .pill-clay {
+    @apply bg-clay-soft text-clay-deep;
+  }
+  .pill-muted {
+    @apply bg-line text-muted;
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-extrabold tracking-[0.1em] text-muted uppercase;
+  }
+  .hint {
+    @apply text-xs text-muted;
+  }
+  .link {
+    @apply font-bold text-sage-deep underline decoration-sage/40 underline-offset-2 hover:decoration-sage;
+  }
+
+  /* The Convene mark: a sage disc with an open ring. */
+  .mark {
+    @apply relative inline-block size-[26px] flex-none rounded-full bg-sage;
+  }
+  .mark::after {
+    content: '';
+    @apply absolute inset-[7px] rounded-full border-[3px] border-linen border-r-transparent;
+  }
 }
 
 /* Friend graph motion (src/features/graph/GraphSvg.tsx). Every element's resting state is its
@@ -43,7 +149,8 @@ body {
 
 .graph-friend:hover .graph-dot {
   transform: scale(1.18);
-  fill: #a7f3d0;
+  fill: var(--color-soft);
+  stroke: var(--color-sage);
 }
 
 .graph-pulse {

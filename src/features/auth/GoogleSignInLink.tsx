@@ -13,10 +13,7 @@ export function googleSignInError(search: string): string | null {
 /** A plain link: the server route answers with a redirect to Google's consent screen. */
 export function GoogleSignInLink() {
   return (
-    <a
-      href="/api/auth/google"
-      className="block w-full rounded-lg border border-stone-300 px-4 py-2 text-center font-medium"
-    >
+    <a href="/api/auth/google" className="btn btn-outline w-full">
       Continue with Google
     </a>
   )

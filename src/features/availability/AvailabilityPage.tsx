@@ -146,94 +146,97 @@ export function AvailabilityPage() {
   })
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-xl font-semibold">Your week</h1>
-      <p className="text-sm text-stone-600">
-        Paint the times you are free. Convene picks the people, activity, place, and exact time
-        inside them, and works around anything on your calendar.
-      </p>
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => setWeekStart(addLocalDays(weekStart, -7))}
-          className="rounded-lg border border-stone-300 px-3 py-1 text-sm"
-        >
-          ← Previous
-        </button>
-        <p className="text-sm font-medium">
-          Week of {weekStart} <span className="text-stone-500">({timezone})</span>
-        </p>
-        <button
-          type="button"
-          onClick={() => setWeekStart(addLocalDays(weekStart, 7))}
-          className="rounded-lg border border-stone-300 px-3 py-1 text-sm"
-        >
-          Next →
-        </button>
+    <section className="space-y-5">
+      <h1 className="text-[26px] leading-tight md:text-[34px]">Your week</h1>
+      <div className="card space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setWeekStart(addLocalDays(weekStart, -7))}
+            className="btn btn-outline btn-sm"
+          >
+            ← Previous
+          </button>
+          <p className="text-center text-sm font-extrabold text-ink">
+            Week of {weekStart} <span className="font-semibold text-muted">({timezone})</span>
+          </p>
+          <button
+            type="button"
+            onClick={() => setWeekStart(addLocalDays(weekStart, 7))}
+            className="btn btn-outline btn-sm"
+          >
+            Next →
+          </button>
+        </div>
+        {week ? (
+          <WeekGrid week={week} selected={selected} onChange={setSelected} />
+        ) : (
+          <p className="hint">Loading…</p>
+        )}
+        <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-muted">
+          <li className="flex items-center gap-1.5">
+            <span className="inline-block size-3.5 rounded bg-sage" />
+            Free
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="inline-block size-3.5 rounded border border-line bg-line bg-[repeating-linear-gradient(135deg,transparent_0_3px,color-mix(in_oklab,var(--color-muted)_22%,transparent)_3px_5px)]" />
+            Busy on your calendar
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="inline-block size-3.5 rounded bg-sage-deep" />
+            Assigned hangout
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="inline-block size-3.5 rounded border border-line bg-linen" />
+            Too soon to plan
+          </li>
+        </ul>
+        {week && (
+          <p className="text-sm text-muted">
+            {weekStatusText(week, state.profile.isRepeatingAvailability)}
+          </p>
+        )}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+          <button
+            type="button"
+            onClick={() => void save()}
+            disabled={!isDirty || isSaving}
+            className="btn btn-primary"
+          >
+            Save this week
+          </button>
+          <label className="flex items-center gap-2 text-sm font-semibold text-ink">
+            <input
+              type="checkbox"
+              checked={state.profile.isRepeatingAvailability}
+              onChange={(e) => void setRepeating(e.target.checked)}
+              className="size-4 accent-sage-deep"
+            />
+            Repeat my latest week automatically
+          </label>
+        </div>
+        {message && <p className="text-sm font-semibold text-ink/85">{message}</p>}
       </div>
-      {week ? (
-        <WeekGrid week={week} selected={selected} onChange={setSelected} />
-      ) : (
-        <p className="text-sm text-stone-500">Loading…</p>
-      )}
-      <ul className="flex flex-wrap gap-3 text-xs text-stone-600">
-        <li>
-          <span className="mr-1 inline-block h-3 w-3 rounded bg-stone-900 align-middle" />
-          Free
-        </li>
-        <li>
-          <span className="mr-1 inline-block h-3 w-3 rounded bg-amber-100 align-middle" />
-          Busy on your calendar
-        </li>
-        <li>
-          <span className="mr-1 inline-block h-3 w-3 rounded bg-emerald-600 align-middle" />
-          Assigned hangout
-        </li>
-        <li>
-          <span className="mr-1 inline-block h-3 w-3 rounded bg-stone-100 align-middle" />
-          Too soon to plan
-        </li>
-      </ul>
-      {week && (
-        <p className="text-sm text-stone-600">
-          {weekStatusText(week, state.profile.isRepeatingAvailability)}
-        </p>
-      )}
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={() => void save()}
-          disabled={!isDirty || isSaving}
-          className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
-        >
-          Save this week
-        </button>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={state.profile.isRepeatingAvailability}
-            onChange={(e) => void setRepeating(e.target.checked)}
-          />
-          Repeat my latest week automatically
-        </label>
-      </div>
-      {message && <p className="text-sm text-stone-700">{message}</p>}
-      <CalendarCard notice={calendarNotice} onChanged={() => loadWeek(weekStart)} />
-      {state.mode === 'demo' && (
-        <button
-          type="button"
-          onClick={() => void runPlanningNow()}
-          className="w-full rounded-lg border border-emerald-700 px-4 py-2 text-sm text-emerald-800"
-        >
-          Run planning now (demo)
-        </button>
-      )}
-      <h2 className="font-semibold">Upcoming windows</h2>
-      <div className="space-y-3">
-        {state.slots.length === 0 && <p className="text-sm text-stone-500">No availability yet.</p>}
-        {(state.slots as SlotView[]).map((slot) => (
-          <SlotCard key={slot.id} slot={slot} {...slotActions(slot)} />
-        ))}
+      <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_320px] md:items-start">
+        <div className="space-y-3 md:sticky md:top-4">
+          <CalendarCard notice={calendarNotice} onChanged={() => loadWeek(weekStart)} />
+          {state.mode === 'demo' && (
+            <button
+              type="button"
+              onClick={() => void runPlanningNow()}
+              className="btn btn-ghost w-full"
+            >
+              Run planning now (demo)
+            </button>
+          )}
+        </div>
+        <div className="space-y-3 md:order-first">
+          <h2 className="text-[19px]">Upcoming windows</h2>
+          {state.slots.length === 0 && <p className="text-sm text-muted">No availability yet.</p>}
+          {(state.slots as SlotView[]).map((slot) => (
+            <SlotCard key={slot.id} slot={slot} {...slotActions(slot)} />
+          ))}
+        </div>
       </div>
     </section>
   )

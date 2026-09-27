@@ -44,12 +44,12 @@ export function CityPicker({ value, onChange }: CityPickerProps) {
           setQuery(event.target.value)
           if (value) onChange(null)
         }}
-        className="w-full rounded-lg border border-stone-300 px-3 py-2"
+        className="field mt-0"
       />
       {matches.length > 0 && (
         <ul
           role="listbox"
-          className="mt-1 divide-y divide-stone-100 rounded-lg border border-stone-200 bg-white"
+          className="mt-1.5 divide-y divide-line overflow-hidden rounded-xl border-[1.5px] border-line bg-surface shadow-[0_6px_18px_rgba(46,51,42,0.08)]"
         >
           {matches.map((match) => (
             <li key={match.key}>
@@ -62,7 +62,7 @@ export function CityPicker({ value, onChange }: CityPickerProps) {
                   setQuery(match.label)
                   setMatches([])
                 }}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-stone-50"
+                className="w-full px-3 py-2.5 text-left text-sm font-semibold text-ink hover:bg-soft focus-visible:bg-soft"
               >
                 {match.label}
               </button>
@@ -70,7 +70,7 @@ export function CityPicker({ value, onChange }: CityPickerProps) {
           ))}
         </ul>
       )}
-      {value && <p className="mt-1 text-xs text-emerald-700">Selected: {value.label}</p>}
+      {value && <p className="mt-1.5 text-xs font-bold text-sage-deep">Selected: {value.label}</p>}
     </div>
   )
 }

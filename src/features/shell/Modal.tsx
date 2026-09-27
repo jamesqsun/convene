@@ -26,18 +26,18 @@ export function Modal({ isOpen, onClose, ariaLabel, children }: ModalProps) {
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel}
-      className="fixed inset-0 z-20 flex items-end justify-center bg-stone-900/40 sm:items-center sm:p-4"
+      className="fixed inset-0 z-20 flex items-end justify-center bg-ink/40 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl"
+        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-[22px] bg-surface p-5 shadow-xl shadow-ink/10 sm:rounded-[22px] md:p-6"
         onClick={(event) => event.stopPropagation()}
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="float-right rounded-full px-2 py-1 text-lg text-stone-400 hover:bg-stone-100 hover:text-stone-600"
+          className="float-right rounded-full px-2 py-1 text-lg leading-none font-bold text-muted/70 hover:bg-linen hover:text-muted"
         >
           ×
         </button>

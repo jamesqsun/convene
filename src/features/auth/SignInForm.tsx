@@ -45,6 +45,7 @@ export function SignInForm() {
 
   return (
     <div className="space-y-6">
+      <h2 className="text-[26px]">Sign in</h2>
       <form
         className="space-y-3"
         onSubmit={(event) => {
@@ -52,17 +53,17 @@ export function SignInForm() {
           void signIn(email, password)
         }}
       >
-        <label className="block text-sm">
+        <label className="field-label">
           Email
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2"
+            className="field"
           />
         </label>
-        <label className="block text-sm">
+        <label className="field-label">
           Password
           <input
             type="password"
@@ -70,23 +71,23 @@ export function SignInForm() {
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2"
+            className="field"
           />
         </label>
-        {error && <p className="text-sm text-red-700">{error}</p>}
-        <button
-          type="submit"
-          disabled={isBusy}
-          className="w-full rounded-lg bg-stone-900 px-4 py-2 font-medium text-white disabled:opacity-50"
-        >
+        {error && (
+          <p role="alert" className="text-sm font-semibold text-clay-deep">
+            {error}
+          </p>
+        )}
+        <button type="submit" disabled={isBusy} className="btn btn-primary w-full">
           Sign in
         </button>
       </form>
       <GoogleSignInLink />
       {personas.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold text-stone-600">Demo personas</h2>
-          <p className="text-xs text-stone-500">Fictional people. Tap one to explore as them.</p>
+          <h3 className="eyebrow font-sans">Demo personas</h3>
+          <p className="hint mt-0.5">Fictional people. Tap one to explore as them.</p>
           <ul className="mt-2 flex flex-wrap gap-2">
             {personas.map((persona) => (
               <li key={persona.email}>
@@ -94,7 +95,7 @@ export function SignInForm() {
                   type="button"
                   disabled={isBusy}
                   onClick={() => void signIn(persona.email, 'demo-password')}
-                  className="rounded-full border border-stone-300 px-3 py-1 text-sm"
+                  className="chip disabled:opacity-50"
                 >
                   {persona.name}
                   {persona.cityLabel ? ` · ${persona.cityLabel}` : ''}
@@ -104,9 +105,9 @@ export function SignInForm() {
           </ul>
         </section>
       )}
-      <p className="text-sm text-stone-600">
+      <p className="text-sm text-muted">
         New here?{' '}
-        <a href="/sign-up" className="font-medium underline">
+        <a href="/sign-up" className="link">
           Create an account
         </a>
       </p>

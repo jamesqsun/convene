@@ -12,9 +12,8 @@ export interface StepProps<Patch> {
   onSave: (patch: Patch) => Promise<void>
 }
 
-const inputClass = 'mt-1 w-full rounded-lg border border-stone-300 px-3 py-2'
-const buttonClass =
-  'mt-4 w-full rounded-lg bg-stone-900 px-4 py-2 font-medium text-white disabled:opacity-50'
+const inputClass = 'field'
+const buttonClass = 'btn btn-primary mt-5 w-full'
 
 export function BasicsStep({ initial, onSave }: StepProps<{ name: string; age: number | null }>) {
   const [name, setName] = useState(initial.name)
@@ -26,7 +25,7 @@ export function BasicsStep({ initial, onSave }: StepProps<{ name: string; age: n
         void onSave({ name: name.trim(), age: Number(age) })
       }}
     >
-      <label className="block text-sm">
+      <label className="field-label">
         Your name
         <input
           required
@@ -36,7 +35,7 @@ export function BasicsStep({ initial, onSave }: StepProps<{ name: string; age: n
           className={inputClass}
         />
       </label>
-      <label className="mt-3 block text-sm">
+      <label className="field-label mt-3">
         Age
         <input
           required
@@ -64,7 +63,7 @@ export function CityStep({ initial, onSave }: StepProps<{ city: CityOption | nul
         if (city) void onSave({ city })
       }}
     >
-      <p className="mb-2 text-sm text-stone-600">Plans are made with people in the same city.</p>
+      <p className="mb-3 text-muted md:text-base">Plans are made with people in the same city.</p>
       <CityPicker value={city} onChange={setCity} />
       <button type="submit" disabled={!city} className={buttonClass}>
         Continue
@@ -82,7 +81,7 @@ export function PhoneStep({ initial, onSave }: StepProps<{ phone: string }>) {
         void onSave({ phone: phone.trim() })
       }}
     >
-      <label className="block text-sm">
+      <label className="field-label">
         Phone number, with country code
         <input
           required
@@ -94,7 +93,7 @@ export function PhoneStep({ initial, onSave }: StepProps<{ phone: string }>) {
           className={inputClass}
         />
       </label>
-      <p className="mt-2 text-xs text-stone-500">
+      <p className="hint mt-2">
         Shared only with the people in a plan you are assigned to, so you can coordinate on the day.
       </p>
       <button type="submit" className={buttonClass}>
@@ -121,7 +120,7 @@ export function InterestsStep({ initial, onSave }: StepProps<{ interests: string
         void onSave({ interests: selected })
       }}
     >
-      <p className="mb-2 text-sm text-stone-600">
+      <p className="mb-3 text-muted md:text-base">
         Pick up to {maxInterests}. These are the only details other participants see.
       </p>
       <ul className="flex flex-wrap gap-2">
@@ -131,13 +130,14 @@ export function InterestsStep({ initial, onSave }: StepProps<{ interests: string
               type="button"
               aria-pressed={selected.includes(interest)}
               onClick={() => toggle(interest)}
-              className={`rounded-full border px-3 py-1 text-sm ${selected.includes(interest) ? 'border-emerald-700 bg-emerald-50 text-emerald-800' : 'border-stone-300'}`}
+              className={`chip ${selected.includes(interest) ? 'chip-on' : ''}`}
             >
               {interest}
             </button>
           </li>
         ))}
       </ul>
+      <p className="hint mt-3">{selected.length} selected</p>
       <button type="submit" disabled={selected.length === 0} className={buttonClass}>
         Continue
       </button>
@@ -170,12 +170,12 @@ export function AnswersStep({
         })
       }}
     >
-      <p className="mb-2 text-sm text-stone-600">
+      <p className="mb-1 text-muted md:text-base">
         A few sentences each. Only you can read these; Convene turns them into memories it uses to
         plan.
       </p>
       {onboardingPrompts.map((prompt) => (
-        <label key={prompt.id} className="mt-3 block text-sm">
+        <label key={prompt.id} className="field-label mt-4">
           {prompt.text}
           <textarea
             required

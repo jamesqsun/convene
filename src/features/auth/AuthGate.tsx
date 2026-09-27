@@ -20,7 +20,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }, [error, needsOnboarding])
 
   if (isLoading || !state || needsOnboarding) {
-    return <p className="p-6 text-center text-sm text-stone-500">Loading…</p>
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 text-sm font-semibold text-muted">
+        <span className="mark animate-pulse" aria-hidden="true" />
+        <p>Loading…</p>
+      </div>
+    )
   }
   return <>{children}</>
 }

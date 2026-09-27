@@ -15,7 +15,7 @@ export interface MemoryEditorProps {
 
 type Row = { key: string; value: string }
 
-const inputClass = 'mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm'
+const inputClass = 'field'
 
 /** Inline editor for a memory's title, summary, and individual attributes. */
 export function MemoryEditor({ memory, onSave, onCancel }: MemoryEditorProps) {
@@ -44,13 +44,13 @@ export function MemoryEditor({ memory, onSave, onCancel }: MemoryEditorProps) {
 
   return (
     <form
-      className="rounded-xl border border-stone-300 bg-white p-4"
+      className="card relative overflow-hidden border-sage pt-5 before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-sage"
       onSubmit={(e) => {
         e.preventDefault()
         void submit()
       }}
     >
-      <label className="block text-sm">
+      <label className="field-label">
         Title
         <input
           required
@@ -60,7 +60,7 @@ export function MemoryEditor({ memory, onSave, onCancel }: MemoryEditorProps) {
           className={inputClass}
         />
       </label>
-      <label className="mt-3 block text-sm">
+      <label className="field-label mt-3">
         Summary
         <textarea
           required
@@ -72,9 +72,9 @@ export function MemoryEditor({ memory, onSave, onCancel }: MemoryEditorProps) {
         />
       </label>
       <fieldset className="mt-3">
-        <legend className="text-sm">Attributes</legend>
+        <legend className="eyebrow">Attributes</legend>
         {rows.map((row, index) => (
-          <div key={index} className="mt-1 flex gap-2">
+          <div key={index} className="mt-2 flex items-center gap-2">
             <input
               aria-label="Attribute name"
               pattern="[a-z][a-z0-9_]*"
@@ -92,7 +92,7 @@ export function MemoryEditor({ memory, onSave, onCancel }: MemoryEditorProps) {
               type="button"
               aria-label="Remove attribute"
               onClick={() => setRows((current) => current.filter((_, i) => i !== index))}
-              className="px-2 text-stone-500"
+              className="px-2 text-lg leading-none text-muted hover:text-ink"
             >
               ×
             </button>
@@ -101,21 +101,17 @@ export function MemoryEditor({ memory, onSave, onCancel }: MemoryEditorProps) {
         <button
           type="button"
           onClick={() => setRows((current) => [...current, { key: '', value: '' }])}
-          className="mt-2 text-sm underline"
+          className="link mt-2.5 text-[13px]"
         >
           Add attribute
         </button>
       </fieldset>
-      {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
+      {error && <p className="mt-2 text-sm text-clay-deep">{error}</p>}
       <div className="mt-4 flex gap-2">
-        <button type="submit" className="rounded-lg bg-stone-900 px-4 py-2 text-sm text-white">
+        <button type="submit" className="btn btn-primary btn-sm">
           Save
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border border-stone-300 px-4 py-2 text-sm"
-        >
+        <button type="button" onClick={onCancel} className="btn btn-outline btn-sm">
           Cancel
         </button>
       </div>

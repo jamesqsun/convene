@@ -32,14 +32,14 @@ export function PastHangoutsSection({ hangouts }: { hangouts: Hangout[] }) {
   }
 
   return (
-    <section className="space-y-3 border-t border-stone-200 pt-4">
-      <h2 className="text-sm font-semibold text-stone-600">Past hangouts</h2>
-      {message && <p className="text-sm text-red-700">{message}</p>}
-      <div className="space-y-3">
+    <section className="space-y-3 border-t border-line pt-5">
+      <h2 className="text-[19px]">Past hangouts</h2>
+      {message && <p className="text-sm font-semibold text-clay-deep">{message}</p>}
+      <div className="grid items-start gap-3 md:grid-cols-2">
         {visible.map((hangout) => (
-          <article key={hangout.eventId} className="rounded-xl border border-stone-200 p-4">
-            <p className="font-semibold">{hangout.activityName}</p>
-            <p className="text-sm text-stone-600">
+          <article key={hangout.eventId} className="card">
+            <p className="font-extrabold">{hangout.activityName}</p>
+            <p className="hint mt-0.5">
               {formatDateTime(hangout.endedAt, hangout.timezone)} · {hangout.venueName}
             </p>
             <ul className="mt-3 space-y-2">
@@ -55,12 +55,12 @@ export function PastHangoutsSection({ hangouts }: { hangouts: Hangout[] }) {
         ))}
       </div>
       {remaining > 0 && (
-        <button type="button" onClick={() => setShowAll(true)} className="text-sm underline">
+        <button type="button" onClick={() => setShowAll(true)} className="link text-sm">
           Show {remaining} more
         </button>
       )}
       {remaining === 0 && hangouts.length > initialCount && (
-        <button type="button" onClick={() => setShowAll(false)} className="text-sm underline">
+        <button type="button" onClick={() => setShowAll(false)} className="link text-sm">
           Show fewer
         </button>
       )}

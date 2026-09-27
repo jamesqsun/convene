@@ -33,23 +33,24 @@ export function SignUpForm() {
 
   return (
     <form
-      className="space-y-3"
+      className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault()
         void submit()
       }}
     >
-      <label className="block text-sm">
+      <h2 className="text-[26px]">Create an account</h2>
+      <label className="field-label">
         Email
         <input
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2"
+          className="field"
         />
       </label>
-      <label className="block text-sm">
+      <label className="field-label">
         Password (8+ characters)
         <input
           type="password"
@@ -57,22 +58,26 @@ export function SignUpForm() {
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2"
+          className="field"
         />
       </label>
-      {error && <p className="text-sm text-red-700">{error}</p>}
-      {notice && <p className="text-sm text-emerald-700">{notice}</p>}
-      <button
-        type="submit"
-        disabled={isBusy}
-        className="w-full rounded-lg bg-stone-900 px-4 py-2 font-medium text-white disabled:opacity-50"
-      >
+      {error && (
+        <p role="alert" className="text-sm font-semibold text-clay-deep">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p className="rounded-xl bg-soft px-3 py-2 text-sm font-semibold text-sage-deep">
+          {notice}
+        </p>
+      )}
+      <button type="submit" disabled={isBusy} className="btn btn-primary w-full">
         Create account
       </button>
       <GoogleSignInLink />
-      <p className="text-sm text-stone-600">
+      <p className="text-sm text-muted">
         Already have one?{' '}
-        <a href="/sign-in" className="font-medium underline">
+        <a href="/sign-in" className="link">
           Sign in
         </a>
       </p>

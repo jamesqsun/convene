@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest'
 import { GraphPage } from './GraphPage'
 
 describe('GraphPage', () => {
-  it('explains the fading and loads', () => {
+  it('titles the page and loads', () => {
     const html = renderToStaticMarkup(<GraphPage />)
-    expect(html).toContain('never disappear')
+    expect(html).toContain('Your connections')
+    expect(html).not.toContain('never disappear')
     expect(html).toContain('Loading')
   })
 })

@@ -12,26 +12,36 @@ export interface MemoryCardProps {
 export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
   const attributes = Object.entries(memory.attributes)
   return (
-    <article className="rounded-xl border border-stone-200 bg-white p-4">
-      <header className="flex items-start justify-between gap-3">
-        <h3 className="font-semibold capitalize">{memory.topic}</h3>
-        {memory.editedAt !== null && <span className="text-xs text-stone-500">Edited by you</span>}
+    <article className="card relative overflow-hidden pt-5 before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-sage/70">
+      <header className="flex items-baseline justify-between gap-3">
+        <h3 className="font-sans text-[15px] font-extrabold tracking-normal capitalize">
+          {memory.topic}
+        </h3>
+        {memory.editedAt !== null && <span className="hint shrink-0">Edited by you</span>}
       </header>
-      <p className="mt-1 text-sm text-stone-700">{memory.summary}</p>
+      <p className="mt-1 text-sm text-ink/85">{memory.summary}</p>
       {attributes.length > 0 && (
-        <ul className="mt-2 flex flex-wrap gap-1">
+        <ul className="mt-2.5 flex flex-wrap gap-1.5">
           {attributes.map(([key, value]) => (
-            <li key={key} className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-700">
+            <li key={key} className="pill pill-sage font-semibold">
               {key.replace(/_/g, ' ')}: {value}
             </li>
           ))}
         </ul>
       )}
-      <footer className="mt-3 flex gap-3 text-sm">
-        <button type="button" onClick={onEdit} className="font-medium text-stone-900 underline">
+      <footer className="mt-3 flex gap-4 border-t border-dashed border-line pt-3 text-[13px] font-bold">
+        <button
+          type="button"
+          onClick={onEdit}
+          className="text-ink underline decoration-line underline-offset-2 hover:decoration-sage"
+        >
           Edit
         </button>
-        <button type="button" onClick={onDelete} className="font-medium text-red-700 underline">
+        <button
+          type="button"
+          onClick={onDelete}
+          className="text-clay-deep underline decoration-clay-deep/30 underline-offset-2 hover:decoration-clay-deep"
+        >
           Delete
         </button>
       </footer>

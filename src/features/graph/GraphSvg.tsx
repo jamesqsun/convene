@@ -36,7 +36,7 @@ export function GraphSvg({ nodes, now }: GraphSvgProps) {
       aria-label="Your connections"
       className="graph w-full max-w-sm overflow-visible"
     >
-      <circle className="graph-pulse" cx={centre.x} cy={centre.y} r={18} fill="#047857" />
+      <circle className="graph-pulse" cx={centre.x} cy={centre.y} r={20} fill="var(--color-sage)" />
       {nodes.map((node, index) => {
         const point = points[index]!
         const drift = driftFor(index)
@@ -59,7 +59,7 @@ export function GraphSvg({ nodes, now }: GraphSvgProps) {
               y1={centre.y}
               x2={point.x}
               y2={point.y}
-              stroke="#047857"
+              stroke="var(--color-sage)"
               strokeWidth={3}
               strokeLinecap="round"
               strokeOpacity={edgeOpacity(node.lastMetAt, now)}
@@ -69,22 +69,36 @@ export function GraphSvg({ nodes, now }: GraphSvgProps) {
                 className="graph-dot"
                 cx={point.x}
                 cy={point.y}
-                r={14}
-                fill="#d1fae5"
-                stroke="#047857"
+                r={15}
+                fill="var(--color-soft)"
+                stroke="var(--color-sage)"
+                strokeWidth={2}
               />
-              <text x={point.x} y={nameY} textAnchor="middle" fontSize={10} fill="#44403c">
+              <text
+                x={point.x}
+                y={nameY}
+                textAnchor="middle"
+                fontSize={11}
+                fontWeight={700}
+                fill="var(--color-ink)"
+              >
                 {node.name}
               </text>
-              <text x={point.x} y={agoY} textAnchor="middle" fontSize={8} fill="#78716c">
+              <text x={point.x} y={agoY} textAnchor="middle" fontSize={9} fill="var(--color-muted)">
                 {formatDaysAgo(node.lastMetAt, now)}
               </text>
             </g>
           </g>
         )
       })}
-      <circle cx={centre.x} cy={centre.y} r={18} fill="#1c1917" />
-      <text x={centre.x} y={centre.y + 4} textAnchor="middle" fontSize={10} fill="#fafaf9">
+      <circle cx={centre.x} cy={centre.y} r={20} fill="var(--color-ink)" />
+      <text
+        x={centre.x}
+        y={centre.y + 4}
+        textAnchor="middle"
+        fontSize={10}
+        fill="var(--color-linen)"
+      >
         You
       </text>
     </svg>

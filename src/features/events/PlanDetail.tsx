@@ -15,22 +15,16 @@ function VenueBlock({ plan }: { plan: Plan }) {
   const mapsUrl = `https://www.google.com/maps/search/?${params}`
   return (
     <div>
-      <h2 className="text-sm font-semibold text-stone-600">Where</h2>
-      <p className="font-medium">{plan.venue.name}</p>
-      <p className="text-sm text-stone-700">{plan.venue.address}</p>
-      <div className="mt-1 flex flex-wrap gap-2 text-xs">
+      <h2 className="eyebrow font-sans">Where</h2>
+      <p className="mt-1 font-extrabold">{plan.venue.name}</p>
+      <p className="text-sm text-ink/85">{plan.venue.address}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
         {plan.venue.provider === 'fictional' && (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-900">
-            Fictional demo venue
-          </span>
+          <span className="pill pill-sage">Fictional demo venue</span>
         )}
-        {!plan.venue.hoursVerified && (
-          <span className="rounded-full bg-stone-200 px-2 py-0.5 text-stone-700">
-            Hours unverified
-          </span>
-        )}
+        {!plan.venue.hoursVerified && <span className="pill pill-muted">Hours unverified</span>}
         {plan.venue.provider !== 'fictional' && (
-          <a href={mapsUrl} target="_blank" rel="noreferrer" className="underline">
+          <a href={mapsUrl} target="_blank" rel="noreferrer" className="link">
             Open in Maps
           </a>
         )}
@@ -42,16 +36,14 @@ function VenueBlock({ plan }: { plan: Plan }) {
 function People({ plan }: { plan: Plan }) {
   return (
     <div>
-      <h2 className="text-sm font-semibold text-stone-600">Who</h2>
-      <ul className="mt-1 space-y-2">
+      <h2 className="eyebrow font-sans">Who</h2>
+      <ul className="mt-2 space-y-2">
         {plan.participants.map((person) => (
-          <li key={person.userId} className="rounded-lg bg-white p-3">
-            <p className="font-medium">{person.name}</p>
-            {person.interests.length > 0 && (
-              <p className="text-xs text-stone-500">{person.interests.join(' · ')}</p>
-            )}
+          <li key={person.userId} className="card p-3">
+            <p className="font-extrabold">{person.name}</p>
+            {person.interests.length > 0 && <p className="hint">{person.interests.join(' · ')}</p>}
             {person.phone && (
-              <a href={`tel:${person.phone}`} className="text-sm underline">
+              <a href={`tel:${person.phone}`} className="link text-sm">
                 {person.phone}
               </a>
             )}
@@ -96,34 +88,26 @@ export function PlanDetail({ plan, onWithdrawn }: PlanDetailProps) {
   }
 
   return (
-    <section className="space-y-5">
+    <section className="@container space-y-5">
       <header>
-        <h1 className="text-xl font-semibold">{plan.activity.name}</h1>
-        <p className="text-sm text-stone-700">
+        <h1 className="text-[26px] leading-tight md:text-[34px]">{plan.activity.name}</h1>
+        <p className="mt-1 text-sm font-semibold text-ink/85">
           {formatTimeRange(plan.startsAt, plan.endsAt, plan.timezone)}{' '}
           {zoneLabel(plan.startsAt, plan.timezone)}
         </p>
-        {plan.status === 'cancelled' && (
-          <p className="mt-1 inline-block rounded-full bg-stone-200 px-2 py-0.5 text-xs">
-            Cancelled
-          </p>
-        )}
+        {plan.status === 'cancelled' && <p className="pill pill-muted mt-2 mr-2">Cancelled</p>}
         {plan.calendarStatus === 'created' && (
-          <p className="mt-1 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-900">
-            In your Google Calendar
-          </p>
+          <p className="pill pill-sage mt-2">In your Google Calendar</p>
         )}
       </header>
-      <p className="text-sm text-stone-700">{plan.explanation}</p>
-      <VenueBlock plan={plan} />
-      <People plan={plan} />
-      {message && <p className="text-sm text-stone-700">{message}</p>}
+      <p className="text-[15px] text-muted">{plan.explanation}</p>
+      <div className="grid gap-5 @lg:grid-cols-2">
+        <VenueBlock plan={plan} />
+        <People plan={plan} />
+      </div>
+      {message && <p className="text-sm font-semibold text-ink/85">{message}</p>}
       {plan.canWithdraw && (
-        <button
-          type="button"
-          onClick={() => void withdraw()}
-          className="w-full rounded-lg border border-red-700 px-4 py-2 text-sm text-red-700"
-        >
+        <button type="button" onClick={() => void withdraw()} className="btn btn-danger w-full">
           Withdraw from this plan
         </button>
       )}

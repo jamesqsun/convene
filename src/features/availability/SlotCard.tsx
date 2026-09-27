@@ -25,52 +25,64 @@ const stateLabels: Record<SlotState, string> = {
 }
 
 const stateStyles: Record<SlotState, string> = {
-  waiting: 'bg-amber-100 text-amber-900',
-  'catch-up': 'bg-amber-100 text-amber-900',
-  assigned: 'bg-emerald-100 text-emerald-900',
-  unfilled: 'bg-stone-200 text-stone-700',
-  paused: 'bg-stone-200 text-stone-700',
-  closed: 'bg-stone-200 text-stone-700',
+  waiting: 'pill-sage',
+  'catch-up': 'pill-sage',
+  assigned: 'bg-sage-deep text-white',
+  unfilled: 'pill-muted',
+  paused: 'pill-muted',
+  closed: 'pill-muted',
 }
 
 export function SlotCard({ slot, onEdit, onPause, onReopen, onRemove }: SlotCardProps) {
   const isEditable = slot.status === 'pending' || slot.status === 'paused'
   return (
-    <article className="rounded-xl border border-stone-200 bg-white p-4">
-      <p className="text-sm font-medium">
+    <article className="card">
+      <p className="text-[15px] font-extrabold text-ink">
         {formatTimeRange(slot.startsAt, slot.endsAt, slot.timezone)}
       </p>
-      <p
-        className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs ${stateStyles[slot.state]}`}
-      >
-        {stateLabels[slot.state]}
-      </p>
+      <p className={`pill mt-2 ${stateStyles[slot.state]}`}>{stateLabels[slot.state]}</p>
       {slot.state === 'waiting' && (
-        <p className="mt-1 text-xs text-stone-500">
+        <p className="hint mt-1.5">
           Planning runs {formatDateTime(slot.expectedBatchAt, slot.timezone)}.
         </p>
       )}
       {slot.state === 'assigned' && slot.assignedEventId && (
-        <Link href={`/plans/${slot.assignedEventId}`} className="mt-1 block text-sm underline">
+        <Link href={`/plans/${slot.assignedEventId}`} className="link mt-2 block text-sm">
           See the plan
         </Link>
       )}
       {isEditable && (
-        <div className="mt-3 flex gap-3 text-sm">
-          <button type="button" onClick={onEdit} className="underline">
+        <div className="mt-3 flex gap-4 text-[13px] font-bold">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="text-sage-deep underline decoration-sage/40 underline-offset-2 hover:decoration-sage"
+          >
             Edit
           </button>
           {slot.status === 'pending' && (
-            <button type="button" onClick={onPause} className="underline">
+            <button
+              type="button"
+              onClick={onPause}
+              className="text-sage-deep underline decoration-sage/40 underline-offset-2 hover:decoration-sage"
+            >
               Pause
             </button>
           )}
           {slot.status === 'paused' && (
-            <button type="button" onClick={onReopen} className="underline">
+            <button
+              type="button"
+              onClick={onReopen}
+              className="text-sage-deep underline decoration-sage/40 underline-offset-2 hover:decoration-sage"
+            >
               Reopen
             </button>
           )}
-          <button type="button" onClick={onRemove} className="text-red-700 underline">
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-clay-deep underline decoration-clay-deep/40 underline-offset-2 hover:decoration-clay-deep"
+          >
             Remove
           </button>
         </div>

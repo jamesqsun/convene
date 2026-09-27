@@ -1,21 +1,17 @@
 /** Deterministic, decorative styling for plan cards: no photos exist, so color stands in for one. */
 
+// Sage & Linen washes only (DECISIONS.md "Sage & Linen visual style").
 const cardGradients = [
-  'from-blue-100 to-indigo-100',
-  'from-emerald-100 to-teal-100',
-  'from-violet-100 to-fuchsia-100',
-  'from-amber-100 to-orange-100',
-  'from-rose-100 to-pink-100',
+  'from-soft to-linen',
+  'from-linen via-soft/70 to-soft',
+  'from-soft via-linen to-line/60',
+  'from-sage/20 via-soft to-linen',
+  'from-line/70 via-linen to-soft',
+  'from-soft via-soft/60 to-clay-soft/50',
 ]
 
-const avatarColors = [
-  'bg-blue-600',
-  'bg-emerald-600',
-  'bg-violet-600',
-  'bg-amber-600',
-  'bg-rose-600',
-  'bg-teal-600',
-]
+// Dark enough for white initials to pass WCAG AA.
+const avatarColors = ['bg-sage-deep', 'bg-ink/80', 'bg-ink']
 
 function hashOf(key: string): number {
   let hash = 0

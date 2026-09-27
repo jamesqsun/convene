@@ -55,26 +55,30 @@ export function ProfilePage() {
   return (
     <section className="space-y-4">
       <header>
-        <h1 className="text-xl font-semibold">{state?.profile.name}</h1>
-        <p className="text-sm text-stone-600">{state?.profile.cityLabel ?? 'No city yet'}</p>
+        <h1 className="text-[26px] leading-tight md:text-[34px]">{state?.profile.name}</h1>
+        <p className="hint mt-1 text-sm">{state?.profile.cityLabel ?? 'No city yet'}</p>
       </header>
-      <div className="flex flex-wrap gap-3 text-sm">
-        <a href="/profile/answers" className="underline">
+      <div className="flex flex-wrap gap-x-4 gap-y-2 text-[13px] font-bold">
+        <a href="/profile/answers" className="link">
           Your answers and regeneration
         </a>
-        <button type="button" onClick={() => void signOut()} className="underline">
+        <button
+          type="button"
+          onClick={() => void signOut()}
+          className="text-ink underline decoration-line underline-offset-2 hover:decoration-sage"
+        >
           Sign out
         </button>
       </div>
-      <h2 className="font-semibold">What Convene remembers</h2>
-      {error && <p className="text-sm text-red-700">{error}</p>}
-      {memories === null && <p className="text-sm text-stone-500">Loading…</p>}
+      <h2 className="pt-2 text-[19px]">What Convene remembers</h2>
+      {error && <p className="text-sm text-clay-deep">{error}</p>}
+      {memories === null && <p className="text-sm text-muted">Loading…</p>}
       {memories?.length === 0 && (
-        <p className="text-sm text-stone-500">
+        <p className="text-sm text-muted">
           No memories yet. Answer the questions on the answers page to generate them.
         </p>
       )}
-      <div className="space-y-3">
+      <div className="grid gap-3 md:grid-cols-2 md:items-start md:gap-[18px]">
         {memories?.map((memory) =>
           editingId === memory.id ? (
             <MemoryEditor

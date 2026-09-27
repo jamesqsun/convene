@@ -1,5 +1,20 @@
 import type { Metadata, Viewport } from 'next'
+import localFont from 'next/font/local'
 import './globals.css'
+
+// Vendored (SIL OFL, see ./fonts) so builds stay offline-capable.
+const nunito = localFont({
+  src: './fonts/nunito-latin-wght.woff2',
+  weight: '200 1000',
+  variable: '--font-nunito',
+  display: 'swap',
+})
+const fraunces = localFont({
+  src: './fonts/fraunces-latin-wght.woff2',
+  weight: '100 900',
+  variable: '--font-fraunces',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Convene',
@@ -9,7 +24,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#1c1917',
+  themeColor: '#f4f1ea',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
@@ -17,7 +32,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${nunito.variable} ${fraunces.variable}`}>
       <body>{children}</body>
     </html>
   )

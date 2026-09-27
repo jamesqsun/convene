@@ -49,30 +49,34 @@ export function PushBanner() {
   if (status === 'hidden') return null
   if (status === 'denied') {
     return (
-      <p className="mx-4 mt-3 rounded-xl bg-stone-100 px-4 py-2 text-xs text-stone-600">
+      <p className="mx-4 mt-3 rounded-2xl border border-line bg-surface px-3.5 py-2.5 text-xs text-muted">
         Notifications are blocked in this browser; plan updates still appear here.
       </p>
     )
   }
   if (status === 'unavailable') {
     return (
-      <p className="mx-4 mt-3 rounded-xl bg-stone-100 px-4 py-2 text-xs text-stone-600">
+      <p className="mx-4 mt-3 rounded-2xl border border-line bg-surface px-3.5 py-2.5 text-xs text-muted">
         Push is not available on this device (on iPhone, add Convene to your Home Screen first).
       </p>
     )
   }
   return (
-    <div className="mx-4 mt-3 flex items-center justify-between gap-3 rounded-xl bg-stone-900 px-4 py-3 text-sm text-white">
+    <div className="mx-4 mt-3 flex items-center justify-between gap-3 rounded-2xl bg-sage-deep px-3.5 py-3 text-sm font-bold text-surface">
       <span>Get a notification when a plan is assigned.</span>
-      <span className="flex gap-2">
+      <span className="flex shrink-0 gap-2">
         <button
           type="button"
           onClick={() => void enable()}
-          className="rounded-lg bg-white px-3 py-1 text-stone-900"
+          className="btn btn-sm bg-surface text-ink hover:bg-linen"
         >
           Enable
         </button>
-        <button type="button" onClick={dismiss} className="px-2 text-stone-300">
+        <button
+          type="button"
+          onClick={dismiss}
+          className="btn btn-sm text-surface/80 hover:text-surface"
+        >
           Later
         </button>
       </span>

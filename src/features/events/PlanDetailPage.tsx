@@ -13,8 +13,8 @@ export function PlanDetailPage({ eventId }: { eventId: string }) {
   if (notice) {
     return (
       <section>
-        <p className="text-sm text-stone-700">{notice}</p>
-        <Link href="/plans" className="mt-2 block text-sm underline">
+        <p className="text-sm font-semibold text-ink/85">{notice}</p>
+        <Link href="/plans" className="link mt-2 inline-block text-sm">
           Back to plans
         </Link>
       </section>
@@ -23,10 +23,10 @@ export function PlanDetailPage({ eventId }: { eventId: string }) {
   if (!plan) {
     return (
       <section>
-        <p className="text-sm text-stone-600">
+        <p className="text-sm text-muted">
           This plan is not available to you, or it has been removed.
         </p>
-        <Link href="/plans" className="mt-2 block text-sm underline">
+        <Link href="/plans" className="link mt-2 inline-block text-sm">
           Back to plans
         </Link>
       </section>

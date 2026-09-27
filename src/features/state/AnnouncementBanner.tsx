@@ -14,11 +14,14 @@ export function AnnouncementBanner({ planIds, onDismiss }: AnnouncementBannerPro
   return (
     <div
       role="status"
-      className="mx-4 mt-3 flex items-center justify-between gap-3 rounded-xl bg-emerald-600 px-4 py-3 text-sm text-white shadow"
+      className="mx-4 mt-3 flex items-center justify-between gap-3 rounded-2xl border border-sage/40 bg-soft px-3.5 py-3 text-sm font-bold text-sage-deep"
     >
       <span>
         New plan assigned.{' '}
-        <Link href={`/plans/${latest}`} className="font-semibold underline">
+        <Link
+          href={`/plans/${latest}`}
+          className="font-extrabold underline decoration-sage/50 underline-offset-2 hover:decoration-sage"
+        >
           See the details
         </Link>
       </span>
@@ -26,7 +29,7 @@ export function AnnouncementBanner({ planIds, onDismiss }: AnnouncementBannerPro
         type="button"
         onClick={onDismiss}
         aria-label="Dismiss"
-        className="rounded-full px-2 text-lg leading-none"
+        className="rounded-full px-2 text-xl leading-none hover:bg-sage/15"
       >
         ×
       </button>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { addLocalDays, localParts, zonedTime } from '@/lib/time'
+import { addLocalDays, zonedTime } from '@/lib/time'
 import type { WeekView } from './weeks'
 import { cellKey, cellsForRange, lineCells, rowClock, rowsPerDay, weekDays } from './week-grid'
 
@@ -44,12 +44,18 @@ function overlaysFor(week: WeekView): Map<string, Overlay> {
   return overlays
 }
 
+/** Diagonal hatching so busy time reads as blocked without relying on colour alone. */
+const busyHatch =
+  'bg-[repeating-linear-gradient(135deg,transparent_0_5px,color-mix(in_oklab,var(--color-muted)_16%,transparent)_5px_7px)]'
+
 function cellClass(isOn: boolean, overlay: Overlay | undefined, isLocked: boolean): string {
-  if (overlay?.kind === 'event') return 'bg-emerald-600 text-white'
+  if (overlay?.kind === 'event') return 'bg-sage-deep font-bold text-white'
   if (overlay?.kind === 'busy')
-    return isOn ? 'bg-amber-200 text-amber-900' : 'bg-amber-100 text-amber-800'
-  if (isLocked) return 'bg-stone-100 text-stone-300'
-  return isOn ? 'bg-stone-900 text-white' : 'bg-white hover:bg-stone-100'
+    return isOn
+      ? `bg-line font-semibold text-ink ${busyHatch} shadow-[inset_3px_0_0_var(--color-sage)]`
+      : `bg-line font-semibold text-muted ${busyHatch}`
+  if (isLocked) return 'bg-linen text-muted/60'
+  return isOn ? 'bg-sage text-white' : 'bg-surface hover:bg-soft'
 }
 
 /** Seven columns of 30-minute cells. Drag across cells to paint or clear availability. */
@@ -103,10 +109,9 @@ export function WeekGrid({ week, selected, onChange }: WeekGridProps) {
   }
 
   const current = painting.current?.next ?? selected
-  const weekStartInstant = zonedTime(week.timeZone, week.weekStart)
   return (
     <div
-      className="select-none overflow-x-auto rounded-xl border border-stone-200 bg-white"
+      className="select-none overflow-x-auto rounded-2xl border border-line bg-surface"
       style={{ touchAction: 'none' }}
       onPointerMove={(event) =>
         painting.current && paint(document.elementFromPoint(event.clientX, event.clientY))
@@ -114,17 +119,17 @@ export function WeekGrid({ week, selected, onChange }: WeekGridProps) {
       onPointerUp={finish}
       onPointerLeave={finish}
     >
-      <table className="w-full table-fixed border-collapse text-[10px] leading-tight">
+      <table className="w-full min-w-[320px] table-fixed border-collapse text-[10px] leading-tight">
         <thead>
           <tr>
-            <th className="w-10 bg-stone-50 p-1 text-left font-normal text-stone-500">
-              {localParts(week.timeZone, weekStartInstant).month}/
-              {localParts(week.timeZone, weekStartInstant).day}
-            </th>
+            <th aria-label="Time" className="w-14 border-r border-b border-line bg-linen" />
             {dayLabels.map((label, day) => (
-              <th key={label} className="bg-stone-50 p-1 font-semibold text-stone-700">
-                {label}{' '}
-                <span className="font-normal text-stone-400">
+              <th
+                key={label}
+                className="border-b border-line bg-linen px-0.5 py-2 text-[11px] font-extrabold text-ink"
+              >
+                {label}
+                <span className="block font-semibold text-muted">
                   {addLocalDays(week.weekStart, day).slice(8)}
                 </span>
               </th>
@@ -134,17 +139,23 @@ export function WeekGrid({ week, selected, onChange }: WeekGridProps) {
         <tbody>
           {Array.from({ length: rowsPerDay }, (_, row) => (
             <tr key={row}>
+              {/* Each label sits just under its hour line, like the first one under the header, so
+                  no line crosses text. Every grid line is a cell border (none inside the buttons),
+                  so the time column and the day columns share exactly the same row edges. */}
               <th
-                className={`bg-stone-50 pr-1 text-right align-top font-normal text-stone-400 ${row % 2 === 0 ? '' : 'invisible'}`}
+                className={`border-r border-line bg-surface p-0 text-center align-top text-xs font-semibold text-muted tabular-nums ${row % 2 === 1 ? 'border-b' : ''}`}
               >
-                {rowClock(row)}
+                {row % 2 === 0 && <span className="block pt-1 leading-none">{rowClock(row)}</span>}
               </th>
               {Array.from({ length: weekDays }, (_, day) => {
                 const key = cellKey(day, row)
                 const overlay = overlays.get(key)
                 const isLocked = isLockedCell(day, row)
                 return (
-                  <td key={key} className="p-0">
+                  <td
+                    key={key}
+                    className={`border-r border-b p-0 ${row % 2 === 1 ? 'border-line' : 'border-line/50'}`}
+                  >
                     <button
                       type="button"
                       data-cell={key}
@@ -152,7 +163,7 @@ export function WeekGrid({ week, selected, onChange }: WeekGridProps) {
                       aria-label={`${dayLabels[day]} ${rowClock(row)}${overlay?.label ? `, ${overlay.label}` : ''}`}
                       disabled={isLocked}
                       onPointerDown={(event) => start(event, key)}
-                      className={`h-5 w-full truncate border-b border-r border-stone-100 px-0.5 text-left ${cellClass(current.has(key), overlay, isLocked)} ${row % 2 === 1 ? 'border-b-stone-200' : ''}`}
+                      className={`block h-6 w-full truncate px-1 text-left transition-colors ${cellClass(current.has(key), overlay, isLocked)}`}
                     >
                       {overlay?.label}
                     </button>

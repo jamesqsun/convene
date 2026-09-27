@@ -44,11 +44,11 @@ export function AnswersPage() {
     setMessage(result.status === 'ok' ? 'Memories regenerated.' : result.notice)
   }
 
-  if (!profile) return <p className="text-sm text-stone-500">{message ?? 'Loading…'}</p>
+  if (!profile) return <p className="text-sm text-muted">{message ?? 'Loading…'}</p>
   return (
     <section className="space-y-4">
-      <h1 className="text-xl font-semibold">Your answers</h1>
-      <p className="text-sm text-stone-600">
+      <h1 className="text-[26px] leading-tight md:text-[34px]">Your answers</h1>
+      <p className="text-muted md:text-base">
         Only you can see these. They are never shown to other participants or used in plan
         explanations.
       </p>
@@ -57,15 +57,11 @@ export function AnswersPage() {
         onSave={save}
         submitLabel="Save answers"
       />
-      <button
-        type="button"
-        onClick={() => void regenerate()}
-        className="w-full rounded-lg border border-stone-300 px-4 py-2 text-sm"
-      >
+      <button type="button" onClick={() => void regenerate()} className="btn btn-ghost w-full">
         Regenerate memories from these answers
       </button>
-      {message && <p className="text-sm text-stone-700">{message}</p>}
-      <a href="/profile" className="block text-sm underline">
+      {message && <p className="text-sm text-ink/85">{message}</p>}
+      <a href="/profile" className="link inline-block text-sm">
         Back to profile
       </a>
     </section>

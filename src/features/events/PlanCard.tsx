@@ -52,13 +52,13 @@ function AvatarStack({ plan }: { plan: Plan }) {
         <span
           key={person.userId}
           title={person.name}
-          className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-xs font-semibold text-white ${avatarColorFor(person.userId)}`}
+          className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-surface text-xs font-extrabold text-surface ${avatarColorFor(person.userId)}`}
         >
           {initialOf(person.name)}
         </span>
       ))}
       {overflow > 0 && (
-        <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-stone-700 text-xs font-semibold text-white">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-surface bg-ink text-xs font-extrabold text-surface">
           +{overflow}
         </span>
       )}
@@ -85,9 +85,9 @@ export function PlanCard({ plan, onOpen }: PlanCardProps) {
         }
       }}
       aria-label={`${plan.activity.name}, ${formatDateTime(plan.startsAt, plan.timezone)}, ${plan.venue.name}`}
-      className={`cursor-pointer space-y-3 rounded-2xl bg-gradient-to-br p-4 ${gradientFor(plan.activity.id)}`}
+      className={`cursor-pointer space-y-3 rounded-[18px] border border-line bg-linear-to-br p-4 shadow-[0_2px_0_rgba(46,51,42,0.03)] transition-colors hover:border-sage/50 ${gradientFor(plan.activity.id)}`}
     >
-      <div className="flex items-center justify-between gap-2 text-xs font-medium text-stone-700">
+      <div className="flex items-center justify-between gap-2 text-xs font-bold text-muted">
         <span className="flex min-w-0 items-center gap-1">
           <PinIcon />
           <span className="truncate">{plan.venue.name}</span>
@@ -97,11 +97,11 @@ export function PlanCard({ plan, onOpen }: PlanCardProps) {
           {formatDateTime(plan.startsAt, plan.timezone)}
         </span>
       </div>
-      <p className="line-clamp-2 text-base font-semibold text-stone-900">{plan.activity.name}</p>
+      <p className="line-clamp-2 font-display text-[17px] leading-snug font-semibold text-ink">
+        {plan.activity.name}
+      </p>
       {plan.status === 'cancelled' && (
-        <span className="inline-block rounded-full bg-white/70 px-2 py-0.5 text-xs text-stone-700">
-          Cancelled
-        </span>
+        <span className="pill bg-surface/80 text-muted">Cancelled</span>
       )}
       <div className="flex items-center justify-between">
         <AvatarStack plan={plan} />
@@ -109,7 +109,7 @@ export function PlanCard({ plan, onOpen }: PlanCardProps) {
           {plan.calendarStatus === 'created' && (
             <span
               title="In your Google Calendar"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 text-emerald-700"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-surface/80 text-sage-deep"
             >
               <CalendarIcon />
             </span>
@@ -121,7 +121,7 @@ export function PlanCard({ plan, onOpen }: PlanCardProps) {
               void shareEvent(plan)
             }}
             aria-label="Share this plan"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 text-stone-700 hover:bg-white"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-surface/80 text-ink hover:bg-surface"
           >
             <ShareIcon />
           </button>
