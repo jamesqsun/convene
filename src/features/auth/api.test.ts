@@ -84,6 +84,66 @@ describe('auth routes', () => {
     expect((await routes.signIn(foreign, noParams)).status).toBe(403)
   })
 
+  it('redirects to Google consent with the callback URI and carries the verifier cookie', async () => {
+    const callbackUris: string[] = []
+    const google: SessionProvider = {
+      ...provider,
+      startGoogleSignIn: async (jar, callbackUri) => {
+        callbackUris.push(callbackUri)
+        jar.setAll([{ name: 'sb-verifier', value: 'v', options: { httpOnly: true } }])
+        return 'https://accounts.example/consent'
+      },
+    }
+    const started = await authRoutes(async () => google).startGoogleSignIn(
+      new Request('http://localhost:3000/api/auth/google'),
+      noParams,
+    )
+    expect(started.status).toBe(302)
+    expect(started.headers.get('location')).toBe('https://accounts.example/consent')
+    expect(started.headers.get('set-cookie')).toContain('sb-verifier=v')
+    expect(callbackUris).toEqual(['http://localhost:3000/api/auth/google/callback'])
+  })
+
+  it('completes Google sign-in with the returned code and lands on availability', async () => {
+    const codes: string[] = []
+    const google: SessionProvider = {
+      ...provider,
+      completeGoogleSignIn: async (jar, code) => {
+        codes.push(code)
+        jar.setAll([{ name: 'sb-token', value: 'jwt', options: { httpOnly: true } }])
+        return 'user-id'
+      },
+    }
+    const completed = await authRoutes(async () => google).completeGoogleSignIn(
+      new Request('http://localhost:3000/api/auth/google/callback?code=abc'),
+      noParams,
+    )
+    expect(completed.status).toBe(302)
+    expect(completed.headers.get('location')).toBe('/availability')
+    expect(completed.headers.get('set-cookie')).toContain('sb-token=jwt')
+    expect(codes).toEqual(['abc'])
+  })
+
+  it('sends failed or unavailable Google sign-in back to the sign-in page', async () => {
+    const routes = authRoutes(async () => provider)
+    const started = await routes.startGoogleSignIn(
+      new Request('http://localhost:3000/api/auth/google'),
+      noParams,
+    )
+    expect(started.status).toBe(302)
+    expect(started.headers.get('location')).toBe('/sign-in?error=google_unavailable')
+    const denied = await routes.completeGoogleSignIn(
+      new Request('http://localhost:3000/api/auth/google/callback?error=access_denied'),
+      noParams,
+    )
+    expect(denied.headers.get('location')).toBe('/sign-in?error=google_failed')
+    const rejected = await routes.completeGoogleSignIn(
+      new Request('http://localhost:3000/api/auth/google/callback?code=abc'),
+      noParams,
+    )
+    expect(rejected.headers.get('location')).toBe('/sign-in?error=google_unavailable')
+  })
+
   it('lists demo personas only in demo mode', async () => {
     await db.query(
       "insert into auth.users (id, email) values (gen_random_uuid(), 'ben@convene.demo')",

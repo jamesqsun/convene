@@ -19,11 +19,49 @@ const credentialsSchema = z
 export interface AuthRoutes {
   signUp: RouteHandler
   signIn: RouteHandler
+  startGoogleSignIn: RouteHandler
+  completeGoogleSignIn: RouteHandler
   signOut: RouteHandler
+}
+
+function redirectResponse(location: string): Response {
+  return new Response(null, { status: 302, headers: { location } })
+}
+
+function googleCallbackUri(request: Request): string {
+  return `${new URL(request.url).origin}/api/auth/google/callback`
+}
+
+/** Both Google routes are browser navigations, so failures return to the sign-in page. */
+function googleFailureResponse(error: unknown): Response {
+  if (!(error instanceof HttpError)) throw error
+  console.error('[auth] Google sign-in failed:', error.code, error.message)
+  return redirectResponse(`/sign-in?error=${error.code}`)
 }
 
 export function authRoutes(getProvider: () => Promise<SessionProvider>): AuthRoutes {
   return {
+    startGoogleSignIn: route(async (request) => {
+      const jar = cookieJarFor(request)
+      try {
+        const provider = await getProvider()
+        const consentUrl = await provider.startGoogleSignIn(jar, googleCallbackUri(request))
+        return jar.applyTo(redirectResponse(consentUrl))
+      } catch (error) {
+        return googleFailureResponse(error)
+      }
+    }),
+    completeGoogleSignIn: route(async (request) => {
+      const code = new URL(request.url).searchParams.get('code')
+      if (!code) return redirectResponse('/sign-in?error=google_failed')
+      const jar = cookieJarFor(request)
+      try {
+        await (await getProvider()).completeGoogleSignIn(jar, code)
+        return jar.applyTo(redirectResponse('/availability'))
+      } catch (error) {
+        return googleFailureResponse(error)
+      }
+    }),
     signUp: route(async (request) => {
       requireSameOrigin(request)
       const body = await readJson(request, credentialsSchema)
@@ -71,5 +109,7 @@ export function demoPersonasRoute(
 const routes = authRoutes(sessionProvider)
 export const signUp = routes.signUp
 export const signIn = routes.signIn
+export const startGoogleSignIn = routes.startGoogleSignIn
+export const completeGoogleSignIn = routes.completeGoogleSignIn
 export const signOut = routes.signOut
 export const demoPersonas = demoPersonasRoute(getDb, () => getEnv().mode === 'demo')
