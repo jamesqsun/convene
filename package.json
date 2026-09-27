@@ -2,7 +2,7 @@
   "name": "convene",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@12.6.0",
+  "packageManager": "pnpm@10.34.5",
   "engines": {
     "node": ">=20.9.0"
   },

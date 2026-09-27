@@ -1,8 +1,8 @@
-allowBuilds:
-  '@tailwindcss/oxide': true
-  esbuild: true
-  sharp: true
-  unrs-resolver: true
+onlyBuiltDependencies:
+  - '@tailwindcss/oxide'
+  - esbuild
+  - sharp
+  - unrs-resolver
 minimumReleaseAgeExclude:
   - '@supabase/auth-js@2.117.2'
   - '@supabase/functions-js@2.117.2'

@@ -13,6 +13,13 @@ to reverse later won.
 
 ## Toolchain
 
+- **Vercel-compatible pnpm and Hobby scheduling.** Pin pnpm 10.34.5 and retain the application
+  dependency document from the old pnpm 12 lockfile, preserving resolved dependency versions.
+  Vercel's parser rejects the multi-document format. Use `onlyBuiltDependencies` for the same
+  build-script allowlist. Default deployment omits the ten-minute Vercel cron because Hobby rejects
+  it; the existing worker or an external scheduler must invoke jobs every ten minutes. A daily
+  cron would change planning behavior, so it is not substituted. Earlier pnpm 12 notes are historical.
+
 - **Next.js 16.3.6 conventions verified from `node_modules/next/dist/docs`:** route handler
   `params` and `cookies()` are async; `middleware.ts` is now `proxy.ts` (unused here); Turbopack is
   the default and `next dev` writes to `.next/dev`; `next lint` no longer exists; `maxDuration` is
@@ -175,7 +182,8 @@ to reverse later won.
 ## After the first end-to-end round
 
 - **`/api/jobs/run` accepts GET as well as POST.** Vercel Cron only sends GET (and attaches the
-  bearer itself); the worker script keeps POSTing. `vercel.json` schedules it every ten minutes.
+  bearer itself); the worker script keeps POSTing. Ten-minute Vercel scheduling is now opt-in for Pro;
+  Hobby uses the worker or an external scheduler (see Toolchain).
 - **`scroll-padding-bottom` on the document** so keyboard focus, anchors, and scroll-into-view keep
   targets clear of the fixed bottom nav. Found when a browser test's minimal scroll left the
   withdraw button under the nav.

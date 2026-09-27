@@ -19,7 +19,7 @@ judgment call made where the specs left room.
 
 ## Quick start (demo mode, no credentials)
 
-Requirements: Node.js 20.9 or newer and pnpm 12 (`npm install -g pnpm`).
+Requirements: Node.js 20.9 or newer and pnpm 10.34.5 (`npm install -g pnpm@10.34.5`).
 
 ```sh
 pnpm install
@@ -147,10 +147,44 @@ possible before the start; attendance is assumed afterwards.
 
    In production, point any cron at `/api/jobs/run` (GET or POST) with
    `Authorization: Bearer <CRON_SECRET>` at least every ten minutes. Each call expires dead slots,
-   runs every due city batch (main and catch-up), and drains push jobs. `vercel.json` schedules
-   Vercel Cron every ten minutes and Vercel adds the bearer header automatically when `CRON_SECRET`
-   is set; note that Hobby projects only allow daily crons, so use a Pro project or an external
-   cron service for hourly catch-up passes. The route declares a 300-second budget.
+   runs every due city batch (main and catch-up), and drains push jobs. The default `vercel.json`
+   does not register a Vercel Cron, so it can deploy on Hobby. Configure an external scheduler or
+   keep the worker running against the production URL; without one, automatic planning and queued
+   notifications do not run. The route declares a 300-second budget.
+
+### Deploy to Vercel Hobby
+
+Add the production variables from `.env.example` in Vercel's project environment settings,
+including `CONVENE_MODE=supabase`. Then run from this directory:
+
+```sh
+npx vercel@latest --prod
+```
+
+The project pins pnpm 10.34.5 and a single-document lockfile for Vercel compatibility. Do not
+regenerate it with pnpm 11/12: their multi-document lockfiles can fail Vercel's config parser.
+The install and build commands in `vercel.json` use the pinned version explicitly.
+
+Hobby permits only daily Vercel Cron jobs, which is insufficient for Convene's city-local planning
+and catch-up passes. For a local development/demo deployment, keep this worker running in PowerShell
+(with `CRON_SECRET` in `.env.local` matching the production secret):
+
+```powershell
+$env:CONVENE_WORKER_URL = 'https://YOUR-PROJECT.vercel.app'
+npx --yes pnpm@10.34.5 worker --interval-seconds 600
+```
+
+For unattended use, configure an external scheduler to send GET or POST to
+`https://YOUR-PROJECT.vercel.app/api/jobs/run` every ten minutes with the header
+`Authorization: Bearer <CRON_SECRET>`. The local worker only runs while its terminal and computer
+remain running. If using Vercel Pro instead, add
+`"crons": [{ "path": "/api/jobs/run", "schedule": "*/10 * * * *" }]` to `vercel.json`;
+Vercel attaches the secret header automatically.
+
+GitHub integration is separate from CLI deployment. If repository connection fails, grant the
+Vercel GitHub App access to the repository, then connect it in Project Settings > Git. A repository
+owner may need to grant that access. You can deploy local source with the CLI while Git integration
+is unconnected; automatic deployments on push require the integration to work.
 
 Row level security is enabled on every table with no policies for the browser roles, so PostgREST
 exposes nothing; all access goes through the authenticated server routes.

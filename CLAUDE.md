@@ -20,7 +20,7 @@ relevant page under `node_modules/next/dist/docs/` before writing App Router cod
 ## Commands
 
 ```sh
-pnpm install                 # pnpm 12 (npm install -g pnpm); corepack on Node 20 cannot fetch it
+pnpm install                 # pnpm 10.34.5 (npm install -g pnpm@10.34.5), pinned for Vercel
 pnpm dev                     # demo mode by default: in-process PGlite, seeded, no external calls
 pnpm typecheck
 pnpm test                    # vitest, all files
@@ -87,7 +87,8 @@ Demo mode uses `calendar/fake.ts`, whose busy pattern is fixed per weekday.
 
 **Scheduler entry point:** `POST` or `GET /api/jobs/run` with `Authorization: Bearer CRON_SECRET`
 (hidden in demo mode; `POST /api/demo/run-jobs` is the signed-in demo equivalent). `scripts/worker.ts`
-calls it on a cadence; `vercel.json` schedules Vercel Cron.
+calls it on a cadence. Hobby deployments require this worker or an external scheduler; the default
+`vercel.json` intentionally has no built-in cron. See README for the optional Pro cron.
 
 **Routes.** `src/app/api/**/route.ts` files are one-line re-exports. Each feature's `api.ts`
 exposes a factory (for example `availabilityRoutes(deps)`) that takes the session provider,
