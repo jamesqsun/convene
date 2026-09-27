@@ -15,6 +15,11 @@ const connectedSchema = z.object({
   CRON_SECRET: z.string().min(16, 'CRON_SECRET must be at least 16 characters'),
   META_API_KEY: z.string().min(1).optional(),
   META_MODEL: z.string().min(1).default('muse-spark-1.3'),
+  EMBEDDING_PROVIDER: z.enum(['gemini', 'openai']).default('gemini'),
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  OPENAI_EMBEDDING_MODEL: z
+    .enum(['text-embedding-3-small', 'text-embedding-3-large'])
+    .default('text-embedding-3-small'),
   GEMINI_API_KEY: z.string().min(1).optional(),
   GEMINI_EMBEDDING_MODEL: z
     .enum(['gemini-embedding-2', 'gemini-embedding-001'])
@@ -45,6 +50,14 @@ export interface GeminiConfig {
   model: 'gemini-embedding-2' | 'gemini-embedding-001'
 }
 
+export interface OpenAiEmbeddingConfig {
+  apiKey: string
+  model: 'text-embedding-3-small' | 'text-embedding-3-large'
+}
+
+export type EmbeddingConfig =
+  (GeminiConfig & { provider: 'gemini' }) | (OpenAiEmbeddingConfig & { provider: 'openai' })
+
 export interface VapidConfig {
   publicKey: string
   privateKey: string
@@ -68,7 +81,7 @@ export interface ConnectedEnv {
   supabase: { url: string; publishableKey: string; serviceRoleKey: string }
   cronSecret: string
   meta: MetaConfig | null
-  gemini: GeminiConfig | null
+  embeddings: EmbeddingConfig | null
   googlePlacesApiKey: string | null
   vapid: VapidConfig | null
   googleCalendar: GoogleCalendarConfig | null
@@ -118,8 +131,12 @@ function readConnected(source: Record<string, string>): ConnectedEnv {
     )
   }
   const raw = parsed.data
-  if (Boolean(raw.META_API_KEY) !== Boolean(raw.GEMINI_API_KEY))
-    throw new EnvError('META_API_KEY and GEMINI_API_KEY must be set together')
+  const embeddingKey = raw.EMBEDDING_PROVIDER === 'openai' ? raw.OPENAI_API_KEY : raw.GEMINI_API_KEY
+  const embeddingKeyName = raw.EMBEDDING_PROVIDER === 'openai' ? 'OPENAI_API_KEY' : 'GEMINI_API_KEY'
+  if (Boolean(raw.META_API_KEY) !== Boolean(embeddingKey))
+    throw new EnvError(
+      `META_API_KEY and ${embeddingKeyName} must be set together for EMBEDDING_PROVIDER=${raw.EMBEDDING_PROVIDER}`,
+    )
   return {
     mode: 'supabase',
     databaseUrl: raw.DATABASE_URL,
@@ -130,8 +147,10 @@ function readConnected(source: Record<string, string>): ConnectedEnv {
     },
     cronSecret: raw.CRON_SECRET,
     meta: raw.META_API_KEY ? { apiKey: raw.META_API_KEY, model: raw.META_MODEL } : null,
-    gemini: raw.GEMINI_API_KEY
-      ? { apiKey: raw.GEMINI_API_KEY, model: raw.GEMINI_EMBEDDING_MODEL }
+    embeddings: embeddingKey
+      ? raw.EMBEDDING_PROVIDER === 'openai'
+        ? { provider: 'openai', apiKey: embeddingKey, model: raw.OPENAI_EMBEDDING_MODEL }
+        : { provider: 'gemini', apiKey: embeddingKey, model: raw.GEMINI_EMBEDDING_MODEL }
       : null,
     googlePlacesApiKey: raw.GOOGLE_PLACES_API_KEY ?? null,
     vapid: readVapid(raw),

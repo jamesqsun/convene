@@ -115,7 +115,13 @@ to reverse later won.
 
 ## Memories
 
-- **Muse Spark for generation, Gemini for embeddings.** Muse Spark 1.3 uses Meta's compatible
+- **Selectable embeddings, unchanged text provider.** `EMBEDDING_PROVIDER` chooses Gemini
+  (default, preserving existing configuration) or OpenAI. Meta remains the text provider. The app,
+  seed, and rebuild share this selection; only the selected key is required alongside Meta's key.
+  Both embedding adapters validate and normalize 1536-dimensional vectors and never fail over to
+  another embedding space. Switching providers requires `embeddings:rebuild` with writers stopped.
+
+- **Initial migration: Muse Spark for generation, Gemini for embeddings.** Muse Spark 1.3 uses Meta's compatible
   Responses endpoint through the existing SDK, with response storage disabled. Gemini Embedding 2
   supplies normalized 1536-dimensional vectors via Google's REST API. Both keys are required
   together; neither service falls back to another embedding space on errors. Migration 0012

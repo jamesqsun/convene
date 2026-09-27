@@ -32,7 +32,7 @@ describe('readEnv', () => {
     expect(env.mode).toBe('supabase')
     if (env.mode !== 'supabase') return
     expect(env.meta).toBeNull()
-    expect(env.gemini).toBeNull()
+    expect(env.embeddings).toBeNull()
     expect(env.googlePlacesApiKey).toBeNull()
     expect(env.vapid).toBeNull()
     expect(env.seedPassword).toBe('convene-demo')
@@ -59,15 +59,15 @@ describe('readEnv', () => {
     expect(env.vapid?.subject).toBe('mailto:ops@example.com')
   })
 
-  it('requires both AI keys and never uses old OpenAI keys', () => {
+  it('requires selected AI keys and ignores an unselected OpenAI key', () => {
     expect(() => readEnv({ ...connected, META_API_KEY: 'meta' })).toThrow(/must be set together/)
     expect(() => readEnv({ ...connected, GEMINI_API_KEY: 'gemini' })).toThrow(
       /must be set together/,
     )
     const old = readEnv({ ...connected, OPENAI_API_KEY: 'old' })
-    expect(old).toMatchObject({ meta: null, gemini: null })
+    expect(old).toMatchObject({ meta: null, embeddings: null })
     expect(readEnv({ ...connected, META_API_KEY: 'meta', GEMINI_API_KEY: 'gemini' })).toMatchObject(
-      { gemini: { apiKey: 'gemini', model: 'gemini-embedding-2' } },
+      { embeddings: { provider: 'gemini', apiKey: 'gemini', model: 'gemini-embedding-2' } },
     )
   })
 
@@ -89,6 +89,56 @@ describe('readEnv', () => {
       tokenSecret: 'x'.repeat(32),
     })
     expect(readEnv(connected)).toMatchObject({ googleCalendar: null })
+  })
+
+  it('selects OpenAI embeddings without requiring Gemini, while keeping Meta for text', () => {
+    const env = readEnv({
+      ...connected,
+      EMBEDDING_PROVIDER: 'openai',
+      META_API_KEY: 'meta',
+      OPENAI_API_KEY: 'openai',
+    })
+    expect(env).toMatchObject({
+      meta: { model: 'muse-spark-1.3' },
+      embeddings: { provider: 'openai', apiKey: 'openai', model: 'text-embedding-3-small' },
+    })
+    expect(() =>
+      readEnv({
+        ...connected,
+        EMBEDDING_PROVIDER: 'openai',
+        META_API_KEY: 'meta',
+        GEMINI_API_KEY: 'unused',
+      }),
+    ).toThrow(/OPENAI_API_KEY/)
+    expect(() =>
+      readEnv({ ...connected, EMBEDDING_PROVIDER: 'openai', OPENAI_API_KEY: 'openai' }),
+    ).toThrow(/META_API_KEY/)
+    expect(
+      readEnv({
+        ...connected,
+        META_API_KEY: 'meta',
+        GEMINI_API_KEY: 'gemini',
+        OPENAI_API_KEY: 'unused',
+      }),
+    ).toMatchObject({ embeddings: { provider: 'gemini', apiKey: 'gemini' } })
+  })
+
+  it('validates the provider and supports model overrides', () => {
+    expect(() => readEnv({ ...connected, EMBEDDING_PROVIDER: 'typo' })).toThrow(
+      /EMBEDDING_PROVIDER/,
+    )
+    expect(
+      readEnv({
+        ...connected,
+        EMBEDDING_PROVIDER: 'openai',
+        META_API_KEY: 'meta',
+        OPENAI_API_KEY: 'key',
+        OPENAI_EMBEDDING_MODEL: 'text-embedding-3-large',
+      }),
+    ).toMatchObject({ embeddings: { model: 'text-embedding-3-large' } })
+    expect(readEnv({ EMBEDDING_PROVIDER: 'typo', OPENAI_API_KEY: 'live' })).toEqual({
+      mode: 'demo',
+    })
   })
 
   it('rejects a short cron secret', () => {

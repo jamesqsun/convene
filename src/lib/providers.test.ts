@@ -12,6 +12,17 @@ const connected = {
 }
 
 describe('providersFor', () => {
+  it('keeps Meta generation when OpenAI embeddings are selected', () => {
+    const providers = providersFor(
+      readEnv({
+        ...connected,
+        META_API_KEY: 'meta',
+        EMBEDDING_PROVIDER: 'openai',
+        OPENAI_API_KEY: 'openai',
+      }),
+    )
+    expect(providers.ai.kind).toBe('meta')
+  })
   it('uses fakes in demo mode even when keys are present', () => {
     const providers = providersFor(
       readEnv({ META_API_KEY: 'sk', GEMINI_API_KEY: 'gk', GOOGLE_PLACES_API_KEY: 'g' }),

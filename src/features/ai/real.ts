@@ -11,7 +11,7 @@ import {
 } from './schemas'
 
 /**
- * Meta Muse Spark adapter using the OpenAI-compatible Responses protocol. Gemini supplies
+ * Meta Muse Spark adapter using the OpenAI-compatible Responses protocol. The selected provider supplies
  * embeddings separately. Extraction results are re-validated with the strict schema;
  * any failure throws so the caller can keep the raw answers and show a notice.
  */

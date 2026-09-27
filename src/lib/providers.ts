@@ -4,7 +4,7 @@ import type { CalendarProvider } from '@/features/calendar/provider'
 import { fakeAiProvider } from '@/features/ai/fake'
 import type { AiProvider } from '@/features/ai/provider'
 import { metaAiProvider } from '@/features/ai/real'
-import { geminiEmbedder } from '@/features/ai/gemini'
+import { embedderFor } from '@/features/ai/embeddings'
 import { fictionalVenueProvider } from '@/features/planning/venues/fictional'
 import { googlePlacesProvider } from '@/features/planning/venues/google-places'
 import type { VenueProvider } from '@/features/planning/venues/provider'
@@ -36,8 +36,8 @@ export function providersFor(env: Env): Providers {
   }
   return {
     ai:
-      env.meta && env.gemini
-        ? metaAiProvider(env.meta, geminiEmbedder(env.gemini))
+      env.meta && env.embeddings
+        ? metaAiProvider(env.meta, embedderFor(env.embeddings))
         : fakeAiProvider(),
     venues: env.googlePlacesApiKey
       ? googlePlacesProvider(env.googlePlacesApiKey)

@@ -9,7 +9,7 @@ person, "Would you want to meet this person again?"; a mutual yes creates a frie
 friendships that are overdue for a reunion get priority in later batches.
 
 Built with Next.js 16 (App Router), React 19, TypeScript, Tailwind, Postgres (Supabase in production,
-in-process PGlite for demo and tests), pgvector, Meta Muse Spark structured outputs, Gemini embeddings,
+in-process PGlite for demo and tests), pgvector, Meta Muse Spark structured outputs, Gemini/OpenAI embeddings,
 Google Places, and web push.
 
 The product and algorithm are specified in [overview.md](overview.md),
@@ -121,7 +121,8 @@ possible before the start; attendance is assumed afterwards.
 1. Create a Supabase project. Enable the email/password provider and set the Site URL.
 2. Copy `.env.example` to `.env.local`, set `CONVENE_MODE=supabase`, and fill in `DATABASE_URL`
    (the transaction pooler URL on Vercel), the Supabase URL and keys, and `CRON_SECRET`.
-   Set `META_API_KEY` and `GEMINI_API_KEY` together for AI, or leave both blank for the demo AI fallback.
+   Set `META_API_KEY` and the selected embedding provider's key together for AI, or leave both blank
+   for the demo AI fallback. `EMBEDDING_PROVIDER` defaults to `gemini`; set it to `openai` to use OpenAI embeddings.
    `GOOGLE_PLACES_API_KEY`, the Google Calendar keys, and the VAPID keys are optional: without them the app
    uses the fictional venue provider and a logging push sender.
    Generate VAPID keys with `node -e "console.log(require('web-push').generateVAPIDKeys())"`.
@@ -181,11 +182,17 @@ Get `META_API_KEY` from [Meta Model API](https://dev.meta.ai/) and `GEMINI_API_K
 Google Places integration. Defaults are `META_MODEL=muse-spark-1.3` (Standard tier) and
 `GEMINI_EMBEDDING_MODEL=gemini-embedding-2`. The latter also supports `gemini-embedding-001`.
 Both embedding models return 1536-dimensional vectors, validated and normalized before storage.
-Muse Spark generates preference memories and ranks activities; Gemini embeds memory text for matching.
+Muse Spark generates preference memories and ranks activities. Choose the provider that embeds memory
+text for matching with `EMBEDDING_PROVIDER=gemini` (default) or `EMBEDDING_PROVIDER=openai`.
 
-The `openai` npm package remains only as a compatible client for Meta's Responses API at
-`https://api.meta.ai/v1`; no calls go to OpenAI and `OPENAI_*` variables are no longer read.
-AI source code lives under `src/features/ai`. Meta responses use `store: false`.
+For OpenAI embeddings, set `OPENAI_API_KEY` and optionally `OPENAI_EMBEDDING_MODEL` (defaults to
+`text-embedding-3-small`; also supports `text-embedding-3-large`). A Gemini key is not required for
+this option. Only the selected provider receives embedding requests; errors never switch providers.
+Both providers use 1536 dimensions. `OPENAI_MODEL` is unused: text generation stays on Meta.
+
+The `openai` npm package is a compatible client for Meta's Responses API at `https://api.meta.ai/v1`
+and, when selected, OpenAI's embeddings endpoint. AI source code lives under `src/features/ai`.
+Meta responses use `store: false`.
 
 When upgrading an existing database, stop the app and scheduler and run:
 
@@ -195,17 +202,20 @@ pnpm embeddings:rebuild
 ```
 
 Migration 0012 clears old vectors without deleting memories, users, plans, or history. Until rebuilt,
-matching falls back to interests. The rebuild uses Gemini and makes billable API calls; it does not
+matching falls back to interests. The rebuild uses the selected embedding provider and makes billable API calls; it does not
 regenerate memory text. It clears all vectors first, so a failed run cannot leave old and new model
 vectors mixed. Fix the error and rerun to complete an interrupted rebuild.
 
-Also rebuild after changing embedding models, enabling real AI after using the fallback, or running
+Also rebuild after changing embedding providers or models, enabling real AI after using the fallback, or running
 `db:reset` (which intentionally creates demo vectors). Keep the app and worker stopped during these
-changes, then restart them after the rebuild. Both API keys must be configured for connected AI;
-configuring only one fails at startup instead of silently mixing real and fake providers.
+changes, then restart them after the rebuild. Meta's key and the selected embedding provider's key
+must be configured for connected AI; configuring only one fails at startup instead of silently mixing
+real and fake providers. Unselected provider keys are not used. No schema migration is required just
+to switch providers; existing vectors must still be rebuilt because their meanings differ.
 
 API references: [Meta structured output](https://dev.meta.ai/docs/structured-output),
-[Gemini embeddings](https://ai.google.dev/gemini-api/docs/embeddings).
+[Gemini embeddings](https://ai.google.dev/gemini-api/docs/embeddings),
+[OpenAI embeddings](https://developers.openai.com/api/docs/guides/embeddings).
 
 ## Checks
 
@@ -247,5 +257,5 @@ scripts/                   migrate, seed, worker, smoke, icon generation
   48-hour guarantee covers assignment, not notification delivery.
 - Explanations use public interests only. Private memories, raw answers, and feedback answers are
   visible only to their owner.
-- Hosted verification (Supabase auth emails, real Meta and Gemini keys, a real Places key, push on a phone
+- Hosted verification (Supabase auth emails, real Meta and selected embedding-provider keys, a real Places key, push on a phone
   over HTTPS) requires your credentials and is tracked in IMPLEMENTATION.md.
