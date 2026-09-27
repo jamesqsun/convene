@@ -10,7 +10,8 @@ async function main() {
     `Discovering city events on ${url.origin}. This sends interest check-ins to city subscribers.`,
   )
   let force = true,
-    failures = 0
+    failures = 0,
+    recipients = 0
   do {
     const response = await fetch(url, {
       method: 'POST',
@@ -22,12 +23,19 @@ async function main() {
     const result = JSON.parse(body)
     console.log(JSON.stringify(result, null, 2))
     failures += result.failed
+    recipients += (result.details ?? []).reduce(
+      (total: number, city: { recipients: number }) => total + city.recipients,
+      0,
+    )
     force = false
     if (!result.remaining) break
   } while (true)
   console.log(
-    'Queued notifications continue delivering in the background. Cities already sent today are not repeated; keep the worker running for retries.',
+    recipients > 0
+      ? `Queued for ${recipients} recipients in this run. Delivery continues in the background.`
+      : 'No recipients were queued by this script run. See each city’s reason above; any background work is separate.',
   )
+  console.log('Cities already sent today are not repeated; keep the worker running for retries.')
   if (failures) process.exitCode = 1
 }
 main().catch((error) => {

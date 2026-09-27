@@ -34,6 +34,12 @@ const eventSchema = z
 export type CityEvent = NonNullable<z.infer<typeof eventSchema>['event']>
 export type CitySearch = (city: CitySearchInput) => Promise<CityEvent | null>
 
+export class CitySearchSkipped extends Error {
+  constructor(public readonly reason: 'no_cited_sources') {
+    super('Muse searched but returned no source citations; no notification was created.')
+  }
+}
+
 /** Search first, then structure only cited research; never substitute model recollection. */
 export function museCitySearch(
   config: MetaConfig,
@@ -64,7 +70,7 @@ export function museCitySearch(
           )
         : [],
     )
-    if (!urls.length) return null
+    if (!urls.length) throw new CitySearchSkipped('no_cited_sources')
     const result = await client.responses.parse({
       model: config.model,
       store: false,

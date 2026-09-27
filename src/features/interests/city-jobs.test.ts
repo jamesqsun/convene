@@ -2,6 +2,7 @@ import { expect, it, vi } from 'vitest'
 import { createTestDb, createUser, count } from '../../../supabase/tests/harness'
 import { drainCityInterests, enqueueCityInterests } from './city-jobs'
 import type { CitySearch } from './city-search'
+import { CitySearchSkipped } from './city-search'
 import { listInterestPrompts } from './store'
 
 it('discovers every city, scopes recipients, preserves sources, and deduplicates concurrent and forced runs', async () => {
@@ -55,7 +56,7 @@ it('isolates city failures, retries with backoff, and skips unverified events', 
     if (city.key === 'a') throw new Error('Search unavailable')
     return null
   }
-  expect(await drainCityInterests(db, search, () => now)).toEqual({
+  expect(await drainCityInterests(db, search, () => now)).toMatchObject({
     claimed: 2,
     sent: 0,
     failed: 1,
@@ -81,6 +82,31 @@ it('isolates city failures, retries with backoff, and skips unverified events', 
       )
     ).claimed,
   ).toBe(2)
+})
+
+it('reports and saves a missing-citation skip without queueing notifications', async () => {
+  const db = await createTestDb(),
+    now = Date.now()
+  await createUser(db)
+  await enqueueCityInterests(db, now)
+  const result = await drainCityInterests(
+    db,
+    async () => {
+      throw new CitySearchSkipped('no_cited_sources')
+    },
+    () => now,
+  )
+  expect(result).toMatchObject({
+    sent: 0,
+    skipped: 1,
+    failed: 0,
+    details: [
+      { status: 'skipped', recipients: 0, reason: expect.stringContaining('no source citations') },
+    ],
+  })
+  const [job] = await db.query<{ last_error: string }>('select last_error from city_interest_jobs')
+  expect(job!.last_error).toContain('no source citations')
+  expect(await count(db, 'notification_jobs')).toBe(0)
 })
 
 it('recovers expired claims but leaves active claims and old dates alone', async () => {

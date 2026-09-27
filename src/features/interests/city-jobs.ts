@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { Db } from '@/lib/db'
 import { localDateOf } from '@/lib/time'
 import { broadcastInterest } from './store'
-import type { CitySearch } from './city-search'
+import { CitySearchSkipped, type CitySearch } from './city-search'
 
 /** Enqueue one search per city/local date; forced runs retry failures/skips but never repeat a sent broadcast. */
 export async function enqueueCityInterests(db: Db, now: number, force = false) {
@@ -70,7 +70,13 @@ export async function drainCityInterests(db: Db, search: CitySearch, clock: () =
             'select claim_id from city_interest_jobs where city_key = $1 and local_date = $2::date for update',
             [job.city_key, job.date],
           )
-          if (current?.claim_id !== claim) return 'superseded'
+          if (current?.claim_id !== claim)
+            return {
+              city: job.city_name,
+              status: 'superseded',
+              reason: 'Claim taken over by another worker',
+              recipients: 0,
+            }
           const duplicate =
             event && previous.some((p) => p.text === event.text || p.source_url === event.sourceUrl)
           const prompt =
@@ -81,33 +87,48 @@ export async function drainCityInterests(db: Db, search: CitySearch, clock: () =
                 })
               : null
           const status = prompt ? 'sent' : 'skipped'
+          const reason = prompt
+            ? null
+            : duplicate
+              ? 'Event source or text was already suggested within the last 30 days'
+              : 'Muse found no suitable verified upcoming event in the next 14 days'
           await tx.query(
-            `update city_interest_jobs set status = $3, prompt_id = $4, claim_id = null, lease_until = null, last_error = null where city_key = $1 and local_date = $2::date`,
-            [job.city_key, job.date, status, prompt?.promptId ?? null],
+            `update city_interest_jobs set status = $3, prompt_id = $4, claim_id = null, lease_until = null, last_error = $5 where city_key = $1 and local_date = $2::date`,
+            [job.city_key, job.date, status, prompt?.promptId ?? null, reason],
           )
-          return status
+          return { city: job.city_name, status, reason, recipients: prompt?.recipients ?? 0 }
         })
       } catch (error) {
-        console.error('[city-interests] search failed:', job.city_key, error)
+        const skipped = error instanceof CitySearchSkipped
+        const reason = skipped ? error.message : 'City event discovery failed; see server logs'
+        if (!skipped) console.error('[city-interests] search failed:', job.city_key, error)
         await db.query(
-          `update city_interest_jobs set status = 'failed', claim_id = null, lease_until = null,
-        next_attempt_at = $4::timestamptz, last_error = 'City event discovery failed; see server logs'
+          `update city_interest_jobs set status = $5, claim_id = null, lease_until = null,
+        next_attempt_at = $4::timestamptz, last_error = $6
         where city_key = $1 and local_date = $2::date and claim_id = $3`,
           [
             job.city_key,
             job.date,
             claim,
             new Date(clock() + 2 ** job.attempts * 60_000).toISOString(),
+            skipped ? 'skipped' : 'failed',
+            reason,
           ],
         )
-        return 'failed'
+        return {
+          city: job.city_name,
+          status: skipped ? 'skipped' : 'failed',
+          reason,
+          recipients: 0,
+        }
       }
     }),
   )
   return {
     claimed: jobs.length,
-    sent: results.filter((r) => r === 'sent').length,
-    skipped: results.filter((r) => r === 'skipped').length,
-    failed: results.filter((r) => r === 'failed').length,
+    sent: results.filter((r) => r.status === 'sent').length,
+    skipped: results.filter((r) => r.status === 'skipped').length,
+    failed: results.filter((r) => r.status === 'failed').length,
+    details: results,
   }
 }

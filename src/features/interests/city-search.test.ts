@@ -50,6 +50,6 @@ it('does not broadcast uncited or unsearched recollections', async () => {
   const search = museCitySearch({ apiKey: 'test', model: 'muse-spark-1.3' }, client)
   await expect(search(city)).rejects.toThrow('web search')
   create.mockResolvedValueOnce({ output_text: 'None found', output: [{ type: 'web_search_call' }] })
-  expect(await search(city)).toBeNull()
+  await expect(search(city)).rejects.toThrow('no source citations')
   expect(parse).not.toHaveBeenCalled()
 })
