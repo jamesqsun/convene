@@ -17,6 +17,7 @@ export const resetTables = [
   'notification_jobs',
   'push_subscriptions',
   'participant_feedback',
+  'event_feedback',
   'friendships',
   'user_date_assignments',
   'participant_reservations',

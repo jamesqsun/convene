@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { isPushSupported, subscribeThisDevice, syncExistingSubscription } from './client'
 
-type Status = 'hidden' | 'prompt' | 'denied' | 'unavailable'
+type Status = 'hidden' | 'prompt' | 'denied' | 'unavailable' | 'not-configured' | 'error'
 
 const dismissedKey = 'convene.pushDismissedAt'
 
@@ -21,11 +21,16 @@ function readDismissed(): boolean {
  */
 export function PushBanner() {
   const [status, setStatus] = useState<Status>('hidden')
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     if (!isPushSupported()) return
     if (Notification.permission === 'granted') {
-      syncExistingSubscription().catch(() => undefined)
+      syncExistingSubscription()
+        .then((subscribed) => {
+          if (!subscribed) setStatus('prompt')
+        })
+        .catch(() => setStatus('error'))
       return
     }
     if (Notification.permission === 'denied') setStatus('denied')
@@ -33,8 +38,17 @@ export function PushBanner() {
   }, [])
 
   async function enable() {
-    const result = await subscribeThisDevice().catch(() => 'unavailable' as const)
-    setStatus(result === 'subscribed' ? 'hidden' : result)
+    if (busy) return
+    setBusy(true)
+    try {
+      const result = await subscribeThisDevice()
+      setStatus(result === 'subscribed' ? 'hidden' : result)
+    } catch (error) {
+      console.error('[push] subscription failed:', error)
+      setStatus('error')
+    } finally {
+      setBusy(false)
+    }
   }
 
   function dismiss() {
@@ -57,8 +71,31 @@ export function PushBanner() {
   if (status === 'unavailable') {
     return (
       <p className="mx-4 mt-3 rounded-2xl border border-line bg-surface px-3.5 py-2.5 text-xs text-muted">
-        Push is not available on this device (on iPhone, add Convene to your Home Screen first).
+        This browser does not support push. On iPhone, open Convene from its Home Screen icon on iOS
+        16.4 or later.
       </p>
+    )
+  }
+  if (status === 'not-configured' || status === 'error') {
+    return (
+      <div
+        role="status"
+        className="mx-4 mt-3 rounded-2xl border border-line bg-surface px-3.5 py-2.5 text-xs text-muted"
+      >
+        <p>
+          {status === 'not-configured'
+            ? 'Notifications are not configured on the server yet.'
+            : 'Could not enable notifications. Check your connection and try again.'}
+        </p>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void enable()}
+          className="link mt-2 disabled:opacity-50"
+        >
+          {busy ? 'Enabling…' : 'Try again'}
+        </button>
+      </div>
     )
   }
   return (
@@ -67,10 +104,11 @@ export function PushBanner() {
       <span className="flex shrink-0 gap-2">
         <button
           type="button"
+          disabled={busy}
           onClick={() => void enable()}
           className="btn btn-sm bg-surface text-ink hover:bg-linen"
         >
-          Enable
+          {busy ? 'Enabling…' : 'Enable'}
         </button>
         <button
           type="button"

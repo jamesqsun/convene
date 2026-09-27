@@ -90,6 +90,19 @@ to reverse later won.
 
 ## Planning pipeline
 
+- **Parallelize finalized groups after selection.** Bucket selection, group partitioning, and
+  proposal persistence finish before external planning starts. Process at most four independent
+  groups concurrently (activity ranking, venue lookup, calendar checks, and atomic commit).
+  Keep city/date batches sequential so multi-day slots retain their existing assignment order.
+  Await all in-flight work before marking a failed batch; preserve outcome order in summaries.
+
+- **End-of-event feedback reminders and links.** Each scheduler tick queues one reminder per
+  active participant for non-cancelled events ended within the preceding 24 hours, excluding
+  submitted event feedback. The unique event/recipient/type key deduplicates ticks; recheck
+  feedback before delivery. This bounded window avoids notifying about all historic seeded events.
+  `/plans/:id` renders the matching completed hangout's feedback controls, with an authorized
+  detail fetch for events outside the 50-item state list. Loading is distinct from unavailable.
+
 - **Manual all-batch sweep.** The secret-authenticated jobs POST accepts `allBatches: true`;
   `planning:run-all` calls the deployed server using worker URL/secret settings. It enumerates
   existing plannable batches and all local dates touched by pending availability after normal
@@ -146,6 +159,24 @@ to reverse later won.
 
 ## Memories
 
+- **Private event feedback adds evidence-backed memories.** Completed, non-cancelled hangouts
+  accept one immutable free-text answer per active participant, independently of meet-again
+  answers. Save it before extraction so provider failures are retryable without losing the text.
+  Only the owner's interests, activity context, and feedback go to extraction. Validate output
+  and verbatim evidence, then atomically append `event_feedback` memories and recompute the
+  profile vector. A locked completion marker prevents duplicate memories on concurrent retries.
+  Existing memories and edits remain intact; onboarding regeneration preserves feedback memories.
+  No inferred facts about other participants belong in these memories. Raw feedback is owner-only
+  and the new table has deny-all RLS.
+
+- **Feedback memory updates run after the response.** Save and acknowledge with HTTP 202, then
+  use Next.js `after` within the route's duration budget to attempt the update immediately.
+  Durable retry metadata lives on `event_feedback`; the existing worker claims up to two rows
+  per tick with SKIP LOCKED, a ten-minute lease and an ownership token. Failures back off for
+  2^attempts minutes, up to five attempts; an expired fifth attempt exposes manual retry too.
+  Interrupted callbacks are recovered by the worker. Polling replaces the UI's pending state.
+  This reduces submission latency without changing the model or dropping saved feedback.
+
 - **Selectable embeddings, unchanged text provider.** `EMBEDDING_PROVIDER` chooses Gemini
   (default, preserving existing configuration) or OpenAI. Meta remains the text provider. The app,
   seed, and rebuild share this selection; only the selected key is required alongside Meta's key.
@@ -162,7 +193,8 @@ to reverse later won.
 - **Evidence is filtered, memories with none are dropped.** Rather than rejecting a whole
   extraction because one evidence string is paraphrased, each entry is checked (case and
   whitespace insensitive) and unsupported ones removed.
-- **Regeneration replaces the whole set**, including edited memories, after an explicit confirm.
+- **Regeneration replaces onboarding memories**, including edited ones, after an explicit confirm;
+  memories learned from event feedback are preserved.
   Keeping a per-memory diff would need a suppression list the spec rules out.
 - **Model-facing schemas are loose, application schemas strict.** OpenAI strict JSON mode rejects
   length and range keywords, so bounds are enforced after parsing. Attributes travel as key/value

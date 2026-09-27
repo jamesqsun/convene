@@ -6,6 +6,7 @@ import { useAppState } from '@/features/state/useAppState'
 import { ApiError, apiFetch } from '@/lib/client-api'
 import { formatDateTime } from '@/lib/format'
 import { PersonFeedback } from './PersonFeedback'
+import { EventFeedbackForm } from './EventFeedbackForm'
 
 const initialCount = 3
 
@@ -51,6 +52,7 @@ export function PastHangoutsSection({ hangouts }: { hangouts: Hangout[] }) {
                 />
               ))}
             </ul>
+            <EventFeedbackForm eventId={hangout.eventId} saved={hangout.myEventFeedback} />
           </article>
         ))}
       </div>

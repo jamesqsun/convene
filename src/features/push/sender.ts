@@ -51,6 +51,15 @@ async function claimJobs(db: Db, now: number, limit: number): Promise<JobRow[]> 
 }
 
 async function payloadFor(db: Db, job: JobRow): Promise<string | null> {
+  if (job.type === 'feedback_reminder') {
+    const eligible = await db.query(
+      `select e.id from events e join event_participants ep on ep.event_id = e.id
+       where e.id = $1 and ep.user_id = $2 and ep.withdrawn_at is null and e.status = 'scheduled'
+       and not exists (select 1 from event_feedback f where f.event_id = e.id and f.user_id = $2)`,
+      [job.event_id, job.recipient_id],
+    )
+    if (!eligible.length) return null
+  }
   const rows = await db.query<{
     id: string
     activity_name: string

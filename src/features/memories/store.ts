@@ -66,7 +66,7 @@ function vectorLiteral(embedding: readonly number[]): string {
   return `[${embedding.join(',')}]`
 }
 
-/** Replaces the owner's generated memories wholesale. Embeddings are stored fresh, not stale. */
+/** Replaces onboarding/seed memories, retaining event-feedback memories and their owner edits. */
 export async function replaceMemories(
   db: Db,
   userId: string,
@@ -75,7 +75,10 @@ export async function replaceMemories(
   source: 'onboarding' | 'seed' = 'onboarding',
 ): Promise<void> {
   await db.transaction(async (tx) => {
-    await tx.query('delete from preference_memories where user_id = $1', [userId])
+    await tx.query(
+      "delete from preference_memories where user_id = $1 and source <> 'event_feedback'",
+      [userId],
+    )
     for (const [index, draft] of drafts.entries()) {
       const embedding = embeddings[index]
       await tx.query(

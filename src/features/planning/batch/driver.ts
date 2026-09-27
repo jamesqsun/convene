@@ -1,4 +1,5 @@
 import { materializeWeeks } from '@/features/availability/weeks'
+import { enqueueFeedbackReminders } from '@/features/push/reminders'
 import { listBusyBlocks } from '@/features/calendar/store'
 import {
   type SyncDeps,
@@ -7,6 +8,7 @@ import {
   syncStaleCalendars,
 } from '@/features/calendar/sync'
 import type { Db } from '@/lib/db'
+import { mapConcurrent } from '@/lib/concurrency'
 import type { Providers } from '@/lib/providers'
 import { cutoffFor, localDayBounds } from '@/lib/time'
 import { type DrainSummary, drainNotificationJobs } from '@/features/push/sender'
@@ -114,6 +116,7 @@ export async function runPlanningTick(
   const candidates = options.allBatches
     ? await listAllPlannableBatches(deps.db, now)
     : dueBatches(cities, states, now)
+  // Keep batches ordered; parallelize independent groups after bucket selection instead.
   for (const due of candidates) {
     const batch = await claimBatch(deps.db, due, deps.clock(), deps.workerId)
     if (batch) batches.push(await runBatch(deps, batch))
@@ -123,6 +126,7 @@ export async function runPlanningTick(
     calendars.entriesCreated = entries.created
     calendars.entriesRemoved = entries.removed
   }
+  await enqueueFeedbackReminders(deps.db, deps.clock())
   const notifications = await drainNotificationJobs(deps.db, deps.providers.push, deps.clock())
   return { expiredSlots, weeksCarriedForward, calendars, batches, notifications }
 }
@@ -132,11 +136,11 @@ export async function runBatch(deps: DriverDeps, batch: BatchRow): Promise<Batch
   try {
     const recovered = await recoverPlanned(deps, batch)
     const groups = await buildGroups(deps, batch)
-    const outcomes = [...recovered]
-    for (const group of groups) {
+    const planned = await mapConcurrent(groups, 4, async (group) => {
       await renewLease(deps.db, batch.id, deps.clock())
-      outcomes.push(await planGroup(deps, batch, group))
-    }
+      return planGroup(deps, batch, group)
+    })
+    const outcomes = [...recovered, ...planned]
     await finishBatch(deps.db, batch.id, 'done', deps.clock(), null)
     return { ...base, status: 'done', groups: outcomes }
   } catch (error) {

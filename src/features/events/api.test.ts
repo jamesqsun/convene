@@ -38,6 +38,32 @@ beforeAll(async () => {
 })
 
 describe('event routes', () => {
+  it('returns the matching completed hangout for an old notification link', async () => {
+    const routesFor = (id: string) =>
+      eventRoutes({
+        getProvider: async () => stubSessionProvider(id),
+        getDatabase: async () => db,
+        getPush: fakePushSender,
+        getCalendar: () => null,
+        tokenSecret: () => 'x'.repeat(32),
+        clock: () => Date.parse('2026-10-04T12:00:00Z'),
+      })
+    const response = await routesFor(a).detail(
+      jsonRequest('GET', `/api/plans/${eventId}`),
+      withParams({ eventId }),
+    )
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ hangout: { eventId, activityName: 'Coffee' } })
+    const outsider = await createUser(db)
+    expect(
+      (
+        await routesFor(outsider).detail(
+          jsonRequest('GET', `/api/plans/${eventId}`),
+          withParams({ eventId }),
+        )
+      ).status,
+    ).toBe(404)
+  })
   it('returns plan detail to participants only and withdraws with a push drain', async () => {
     const push = fakePushSender()
     const routesFor = (id: string | null) =>
