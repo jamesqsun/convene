@@ -164,8 +164,8 @@ pnpm interests:send "Barcelona won the champions league"
 The text can be up to 400 characters. This queues a notification for **every user with an
 active push subscription**, delivered to their subscribed devices. The script exits after
 the server accepts the broadcast; delivery continues in the background. Keep the worker
-running for interrupted delivery and memory-update retries. No notifications are generated
-automatically.
+running for interrupted delivery and memory-update retries. This command broadcasts the exact text
+you supply; the separate daily city job below discovers local events automatically.
 
 Tapping opens a private Yes/No interest check-in; users can also find it under Profile →
 Interest check-ins. Answers save immediately and asynchronously add a memory scoped to that
@@ -173,6 +173,33 @@ exact topic, using the same AI memory extraction as profile answers and the conf
 provider. Existing memories are preserved, and
 regenerating onboarding memories keeps these responses. Each person can answer only their
 own check-in, once; failed memory processing can be retried without duplicating the memory.
+
+### Daily city event check-ins
+
+Apply `0017_city_interests.sql` with `pnpm migrate` **before deploying**. The daily Vercel cron
+calls `/api/jobs/city-interests` at 16:00 UTC (Hobby may invoke it later in that hour). It uses the
+existing `CRON_SECRET`, `META_API_KEY` / `META_MODEL`, and VAPID configuration; no separate search
+API key is needed. Muse uses its built-in live web search, then formats a cited upcoming public
+event within the next 14 days into a check-in. Uncited results are skipped; provider errors retry.
+
+Every city represented in profiles gets a job, with at most one successful broadcast per local
+date. Only that city's active push subscribers receive it. The check-in shows an **Event details
+and source** link, and Yes/No responses use the same asynchronous memory extraction as other
+check-ins. Previously suggested source URLs/text within 30 days are suppressed.
+
+To run now against the deployed server:
+
+```sh
+pnpm interests:discover
+```
+
+This script uses `CONVENE_WORKER_URL` and `CRON_SECRET`, retries today's failed/skipped searches,
+and processes queued cities in batches of two. It does not repeat today's successful broadcasts.
+The cron also starts post-response work; keep the regular worker running to finish large queues,
+recover interrupted searches, and retry failed pushes. Searches have ten-minute leases and up to
+five attempts with backoff. Old unfinished dates are not replayed as stale notifications.
+The command reports searches/queued broadcasts, not confirmed phone delivery. Live discovery
+makes billable Muse calls; automated tests use stubbed search results.
 
 ## Google Cloud setup for calendar sync
 
@@ -226,7 +253,7 @@ own check-in, once; failed memory processing can be retried without duplicating 
    In production, point any cron at `/api/jobs/run` (GET or POST) with
    `Authorization: Bearer <CRON_SECRET>` at least every ten minutes. Each call expires dead slots,
    runs every due city batch (main and catch-up), and drains push jobs. The default `vercel.json`
-   does not register a Vercel Cron, so it can deploy on Hobby. Configure an external scheduler or
+   registers only the daily city-interest cron, which can deploy on Hobby. Configure an external scheduler or
    keep the worker running against the production URL; without one, automatic planning and queued
    notifications do not run. The route declares a 300-second budget.
 
@@ -255,8 +282,8 @@ npx --yes pnpm@10.34.5 worker --interval-seconds 600
 For unattended use, configure an external scheduler to send GET or POST to
 `https://YOUR-PROJECT.vercel.app/api/jobs/run` every ten minutes with the header
 `Authorization: Bearer <CRON_SECRET>`. The local worker only runs while its terminal and computer
-remain running. If using Vercel Pro instead, add
-`"crons": [{ "path": "/api/jobs/run", "schedule": "*/10 * * * *" }]` to `vercel.json`;
+remain running. If using Vercel Pro instead, append
+`{ "path": "/api/jobs/run", "schedule": "*/10 * * * *" }` to the existing `crons` array in `vercel.json`;
 Vercel attaches the secret header automatically.
 
 GitHub integration is separate from CLI deployment. If repository connection fails, grant the

@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "npx --yes pnpm@10.34.5 install --frozen-lockfile",
-  "buildCommand": "npx --yes pnpm@10.34.5 run build"
+  "buildCommand": "npx --yes pnpm@10.34.5 run build",
+  "crons": [{ "path": "/api/jobs/city-interests", "schedule": "0 16 * * *" }]
 }

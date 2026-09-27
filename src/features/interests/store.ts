@@ -7,26 +7,39 @@ export interface InterestPrompt {
   answer: 'yes' | 'no' | null
   memoriesUpdated: boolean
   failed: boolean
+  sourceUrl?: string | null
 }
 
 /** Snapshot distinct subscribers once. The caller supplies an idempotency UUID. */
-export async function broadcastInterest(db: Db, id: string, text: string, now: number) {
+export async function broadcastInterest(
+  db: Db,
+  id: string,
+  text: string,
+  now: number,
+  city?: { key: string; sourceUrl: string },
+) {
   return db.transaction(async (tx) => {
     const inserted = await tx.query(
-      'insert into interest_prompts (id, text) values ($1, $2) on conflict do nothing returning id',
-      [id, text],
+      'insert into interest_prompts (id, text, city_key, source_url) values ($1, $2, $3, $4) on conflict do nothing returning id',
+      [id, text, city?.key ?? null, city?.sourceUrl ?? null],
     )
-    const [prompt] = await tx.query<{ text: string }>(
-      'select text from interest_prompts where id = $1',
-      [id],
+    const [prompt] = await tx.query<{
+      text: string
+      city_key: string | null
+      source_url: string | null
+    }>('select text, city_key, source_url from interest_prompts where id = $1', [id])
+    if (
+      prompt!.text !== text ||
+      prompt!.city_key !== (city?.key ?? null) ||
+      prompt!.source_url !== (city?.sourceUrl ?? null)
     )
-    if (prompt!.text !== text)
       throw new HttpError(409, 'request_conflict', 'This request ID was used for a different topic')
     if (inserted.length) {
       await tx.query(
         `insert into interest_responses (prompt_id, user_id)
-        select $1, user_id from push_subscriptions where retired_at is null group by user_id`,
-        [id],
+        select $1, s.user_id from push_subscriptions s join profiles p on p.id = s.user_id
+        where s.retired_at is null and ($2::text is null or p.city_key = $2) group by s.user_id`,
+        [id, city?.key ?? null],
       )
       await tx.query(
         `insert into notification_jobs (prompt_id, recipient_id, type, next_attempt_at)
@@ -49,7 +62,7 @@ export async function listInterestPrompts(
   id?: string,
 ): Promise<InterestPrompt[]> {
   return db.query<InterestPrompt>(
-    `select p.id, p.text, r.answer, r.memories_updated as "memoriesUpdated",
+    `select p.id, p.text, p.source_url as "sourceUrl", r.answer, r.memories_updated as "memoriesUpdated",
     (not r.memories_updated and r.attempts >= 5 and (r.lease_until is null or r.lease_until < $2::timestamptz)) as failed
     from interest_responses r join interest_prompts p on p.id = r.prompt_id
     where r.user_id = $1 and ($3::uuid is null or p.id = $3) order by p.created_at desc limit 50`,
