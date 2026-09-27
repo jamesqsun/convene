@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ApiError, apiFetch } from '@/lib/client-api'
+import { GoogleSignInLink } from './GoogleSignInLink'
 
 export function SignUpForm() {
   const [email, setEmail] = useState('')
@@ -68,6 +69,7 @@ export function SignUpForm() {
       >
         Create account
       </button>
+      <GoogleSignInLink />
       <p className="text-sm text-stone-600">
         Already have one?{' '}
         <a href="/sign-in" className="font-medium underline">

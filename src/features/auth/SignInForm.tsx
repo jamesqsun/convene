@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { ApiError, apiFetch } from '@/lib/client-api'
+import { GoogleSignInLink, googleSignInError } from './GoogleSignInLink'
 
 interface Persona {
   email: string
@@ -21,6 +22,10 @@ export function SignInForm() {
     apiFetch<{ personas: Persona[] }>('/api/auth/demo-personas')
       .then((body) => setPersonas(body.personas))
       .catch(() => setPersonas([]))
+  }, [])
+
+  useEffect(() => {
+    setError(googleSignInError(window.location.search))
   }, [])
 
   async function signIn(asEmail: string, asPassword: string) {
@@ -77,6 +82,7 @@ export function SignInForm() {
           Sign in
         </button>
       </form>
+      <GoogleSignInLink />
       {personas.length > 0 && (
         <section>
           <h2 className="text-sm font-semibold text-stone-600">Demo personas</h2>

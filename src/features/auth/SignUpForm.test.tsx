@@ -7,5 +7,6 @@ describe('SignUpForm', () => {
     const html = renderToStaticMarkup(<SignUpForm />)
     expect(html).toContain('minLength="8"')
     expect(html).toContain('href="/sign-in"')
+    expect(html).toContain('href="/api/auth/google"')
   })
 })

@@ -8,5 +8,6 @@ describe('SignInForm', () => {
     expect(html).toContain('type="email"')
     expect(html).toContain('type="password"')
     expect(html).toContain('href="/sign-up"')
+    expect(html).toContain('href="/api/auth/google"')
   })
 })
