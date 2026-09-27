@@ -55,6 +55,17 @@ describe('demoSessionProvider', () => {
     ).toBeNull()
   })
 
+  it('refuses Google sign-in so demo mode never reaches a provider', async () => {
+    const provider = demoSessionProvider(db, secret)
+    const unavailable = { status: 404, code: 'google_unavailable' }
+    await expect(
+      provider.startGoogleSignIn(jarWith(), 'http://localhost/cb'),
+    ).rejects.toMatchObject(unavailable)
+    await expect(provider.completeGoogleSignIn(jarWith(), 'code')).rejects.toMatchObject(
+      unavailable,
+    )
+  })
+
   it('signs out by expiring the cookie', async () => {
     const provider = demoSessionProvider(db, secret)
     const jar = jarWith()

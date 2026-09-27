@@ -8,7 +8,9 @@ import type { SessionProvider } from './session'
 /**
  * Supabase Auth through the SSR cookie client. Identity is always verified with `auth.getUser()`,
  * which contacts Supabase, never by trusting a cached session. Every sign-in also makes sure a
- * profile row exists so onboarding can resume.
+ * profile row exists so onboarding can resume. Google sign-in is Supabase's own Google provider:
+ * Supabase runs the exchange with Google and keeps the PKCE verifier in a cookie between the two
+ * requests.
  */
 
 type ClientFactory = typeof createServerClient
@@ -48,6 +50,26 @@ export function supabaseSessionProvider(
       })
       if (error || !data.user)
         throw new HttpError(401, 'invalid_credentials', 'Email or password is incorrect')
+      await ensureProfile(db, data.user.id)
+      return data.user.id
+    },
+    async startGoogleSignIn(jar, callbackUri) {
+      const { data, error } = await clientFor(env, jar, factory).auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: callbackUri, skipBrowserRedirect: true },
+      })
+      if (error || !data.url)
+        throw new HttpError(
+          502,
+          'google_unavailable',
+          error?.message ?? 'Could not start Google sign-in',
+        )
+      return data.url
+    },
+    async completeGoogleSignIn(jar, code) {
+      const { data, error } = await clientFor(env, jar, factory).auth.exchangeCodeForSession(code)
+      if (error || !data.user)
+        throw new HttpError(401, 'google_failed', 'Google sign-in could not be completed')
       await ensureProfile(db, data.user.id)
       return data.user.id
     },

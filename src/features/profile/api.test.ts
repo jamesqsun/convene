@@ -22,6 +22,8 @@ function stubProvider(id: string | null): SessionProvider {
     kind: 'demo',
     signUp: async () => ({ userId: '', isEmailConfirmationPending: false }),
     signIn: async () => '',
+    startGoogleSignIn: async () => '',
+    completeGoogleSignIn: async () => '',
     signOut: async () => undefined,
     userIdFrom: async () => id,
   }

@@ -27,6 +27,9 @@ export interface SessionProvider {
   readonly kind: 'supabase' | 'demo'
   signUp(jar: CookieJar, email: string, password: string): Promise<SignUpResult>
   signIn(jar: CookieJar, email: string, password: string): Promise<string>
+  /** Returns the Google consent URL; Google sends the browser back to `callbackUri` with a code. */
+  startGoogleSignIn(jar: CookieJar, callbackUri: string): Promise<string>
+  completeGoogleSignIn(jar: CookieJar, code: string): Promise<string>
   signOut(jar: CookieJar): Promise<void>
   userIdFrom(jar: CookieJar): Promise<string | null>
 }

@@ -27,6 +27,10 @@ export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase()
 }
 
+function googleUnavailable(): HttpError {
+  return new HttpError(404, 'google_unavailable', 'Google sign-in is not available in demo mode')
+}
+
 function setSession(jar: CookieJar, userId: string, secret: Buffer): void {
   jar.setAll([
     {
@@ -63,6 +67,12 @@ export function demoSessionProvider(db: Db, secret: Buffer = demoSecret()): Sess
         throw new HttpError(401, 'invalid_credentials', 'No demo account with that email')
       setSession(jar, userId, secret)
       return userId
+    },
+    async startGoogleSignIn() {
+      throw googleUnavailable()
+    },
+    async completeGoogleSignIn() {
+      throw googleUnavailable()
     },
     async signOut(jar) {
       jar.setAll([

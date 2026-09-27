@@ -89,4 +89,65 @@ describe('supabaseSessionProvider', () => {
     )
     expect(await anonymous.userIdFrom(jar())).toBeNull()
   })
+
+  it('starts Google sign-in without a browser redirect and returns the consent URL', async () => {
+    const signInWithOAuth = vi.fn(async () => ({
+      data: { provider: 'google', url: 'https://accounts.example/consent' },
+      error: null,
+    }))
+    const provider = supabaseSessionProvider(env, db, stubFactory({ signInWithOAuth }))
+    const j = jar()
+    expect(await provider.startGoogleSignIn(j, 'http://localhost/api/auth/google/callback')).toBe(
+      'https://accounts.example/consent',
+    )
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: {
+        redirectTo: 'http://localhost/api/auth/google/callback',
+        skipBrowserRedirect: true,
+      },
+    })
+    expect(j.applyTo(new Response()).headers.get('set-cookie')).toContain('sb-token=jwt')
+    const failing = supabaseSessionProvider(
+      env,
+      db,
+      stubFactory({
+        signInWithOAuth: async () => ({ data: { url: null }, error: { message: 'disabled' } }),
+      }),
+    )
+    await expect(failing.startGoogleSignIn(jar(), 'http://localhost/cb')).rejects.toMatchObject({
+      status: 502,
+      code: 'google_unavailable',
+    })
+  })
+
+  it('completes Google sign-in, ensures a profile row, and maps failures to 401', async () => {
+    const googleUserId = '22222222-2222-4222-8222-222222222222'
+    await db.query('insert into auth.users (id, email) values ($1, $2)', [
+      googleUserId,
+      'google@example.com',
+    ])
+    const exchangeCodeForSession = vi.fn(async () => ({
+      data: { user: { id: googleUserId }, session: {} },
+      error: null,
+    }))
+    const provider = supabaseSessionProvider(env, db, stubFactory({ exchangeCodeForSession }))
+    expect(await provider.completeGoogleSignIn(jar(), 'auth-code')).toBe(googleUserId)
+    expect(exchangeCodeForSession).toHaveBeenCalledWith('auth-code')
+    expect(await db.query('select 1 from profiles where id = $1', [googleUserId])).toHaveLength(1)
+    const failing = supabaseSessionProvider(
+      env,
+      db,
+      stubFactory({
+        exchangeCodeForSession: async () => ({
+          data: { user: null, session: null },
+          error: { message: 'expired' },
+        }),
+      }),
+    )
+    await expect(failing.completeGoogleSignIn(jar(), 'stale')).rejects.toMatchObject({
+      status: 401,
+      code: 'google_failed',
+    })
+  })
 })
