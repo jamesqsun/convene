@@ -119,6 +119,11 @@ possible before the start; attendance is assumed afterwards.
 ## Connect Supabase, Meta Muse Spark, Gemini, Google Places, and push
 
 1. Create a Supabase project. Enable the email/password provider and set the Site URL.
+   For "Continue with Google", enable the Google provider under Authentication > Providers with
+   the OAuth client id and secret, add `http://localhost:3000/api/auth/google/callback` (plus your
+   deployed origin and the same path) under Authentication > URL Configuration > Redirect URLs, and
+   add `https://YOUR_PROJECT.supabase.co/auth/v1/callback` to the Google OAuth client's authorized
+   redirect URIs. Without this the link returns to the sign-in page with a notice.
 2. Copy `.env.example` to `.env.local`, set `CONVENE_MODE=supabase`, and fill in `DATABASE_URL`
    (the transaction pooler URL on Vercel), the Supabase URL and keys, and `CRON_SECRET`.
    Set `META_API_KEY` and the selected embedding provider's key together for AI, or leave both blank

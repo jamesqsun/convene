@@ -107,6 +107,15 @@ to reverse later won.
   proxy/middleware file is needed for token refresh.
 - **Demo sign-in is email only.** The password field is accepted and ignored; persona chips sign in
   with one tap. A forged cookie fails the HMAC and is treated as signed out.
+- **Google sign-in goes through Supabase Auth's Google provider**, alongside email and password
+  (added 2026-09-27). Replacing Supabase Auth with our own Google OAuth was considered and
+  rejected for now: it needs its own sessions and users table, and the seeded personas, which have
+  no Google accounts, could no longer sign in. Both routes are browser navigations, so failures
+  redirect to `/sign-in?error=<code>` instead of returning JSON. The link is always rendered; a
+  demo server answers it with `google_unavailable` rather than the page asking which mode it is in.
+- **Sign-in and calendar access are separate consents**, even with the same Google client.
+  Sign-in asks for identity only; the broader `calendar` scope is requested when a person chooses
+  to connect a calendar.
 - **The onboarding step is derived from saved fields**, never stored, so a refresh resumes at the
   right place and a profile can never be "stuck" on a stale cursor. Completion is stamped once every
   field is present; at least one interest is required.
